@@ -18,7 +18,17 @@ export async function generateRoutes<Config extends ExtendedRoutesConfig>(
   defaultNumberType?: BaseConfig['defaultNumberType'],
 ) {
   if (!metadata) {
-    metadata = new MetadataGenerator(routesConfig.entryFile, compilerOptions, ignorePaths, routesConfig.controllerPathGlobs, routesConfig.rootSecurity, defaultNumberType).Generate();
+    const tsconfigPath = MetadataGenerator.resolveTsconfigPath(routesConfig.entryFile);
+    metadata = new MetadataGenerator(
+      routesConfig.entryFile,
+      compilerOptions,
+      ignorePaths,
+      routesConfig.controllerPathGlobs,
+      routesConfig.rootSecurity,
+      defaultNumberType,
+      undefined,
+      tsconfigPath,
+    ).Generate();
   }
 
   const routeGenerator = await getRouteGenerator(metadata, routesConfig);

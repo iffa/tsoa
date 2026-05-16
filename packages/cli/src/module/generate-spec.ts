@@ -26,7 +26,17 @@ export const generateSpec = async (
   defaultNumberType?: Config['defaultNumberType'],
 ) => {
   if (!metadata) {
-    metadata = new MetadataGenerator(swaggerConfig.entryFile, compilerOptions, ignorePaths, swaggerConfig.controllerPathGlobs, swaggerConfig.rootSecurity, defaultNumberType).Generate();
+    const tsconfigPath = MetadataGenerator.resolveTsconfigPath(swaggerConfig.entryFile);
+    metadata = new MetadataGenerator(
+      swaggerConfig.entryFile,
+      compilerOptions,
+      ignorePaths,
+      swaggerConfig.controllerPathGlobs,
+      swaggerConfig.rootSecurity,
+      defaultNumberType,
+      undefined,
+      tsconfigPath,
+    ).Generate();
   }
 
   let spec: Swagger.Spec;
