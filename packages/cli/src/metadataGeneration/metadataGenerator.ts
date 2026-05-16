@@ -1,5 +1,7 @@
 import { Config, Tsoa } from '@tsoa/runtime';
 import { minimatch } from 'minimatch';
+import * as path from 'path';
+import * as ts from 'typescript';
 import { createProgram, forEachChild, isClassDeclaration, type ClassDeclaration, type CompilerOptions, type Program, type TypeChecker } from 'typescript';
 import { getDecorators } from '../utils/decoratorUtils';
 import { importClassesFromDirectories } from '../utils/importClassesFromDirectories';
@@ -23,10 +25,33 @@ export class MetadataGenerator {
     private readonly rootSecurity: Tsoa.Security[] = [],
     public readonly defaultNumberType: NonNullable<Config['defaultNumberType']> = 'double',
     esm = false,
+    tsconfigPath?: string,
   ) {
     TypeResolver.clearCache();
-    this.program = controllers ? this.setProgramToDynamicControllersFiles(controllers, esm) : createProgram([entryFile], compilerOptions || {});
+    const resolvedOptions = tsconfigPath ? this.resolveCompilerOptionsFromTsconfig(tsconfigPath, compilerOptions) : compilerOptions || {};
+    this.program = controllers ? this.setProgramToDynamicControllersFiles(controllers, esm, resolvedOptions) : createProgram([entryFile], resolvedOptions);
     this.typeChecker = this.program.getTypeChecker();
+  }
+
+  /**
+   * Reads the provided tsconfig.json and merges its compiler options with any explicit
+   * overrides. Explicit overrides take precedence over tsconfig settings.
+   */
+  static resolveTsconfigPath(entryFile: string): string | undefined {
+    const searchDir = path.isAbsolute(entryFile) ? path.dirname(entryFile) : path.dirname(path.resolve(entryFile));
+    return ts.findConfigFile(searchDir, ts.sys.fileExists.bind(ts.sys), 'tsconfig.json');
+  }
+
+  private resolveCompilerOptionsFromTsconfig(tsconfigPath: string, overrides?: CompilerOptions): CompilerOptions {
+    const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile.bind(ts.sys));
+    if (configFile.error) {
+      return overrides || {};
+    }
+    const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(tsconfigPath));
+    if (parsed.errors.length) {
+      return overrides || {};
+    }
+    return { ...parsed.options, ...(overrides || {}) };
   }
 
   public Generate(): Tsoa.Metadata {
@@ -43,13 +68,13 @@ export class MetadataGenerator {
     };
   }
 
-  private setProgramToDynamicControllersFiles(controllers: string[], esm: boolean) {
+  private setProgramToDynamicControllersFiles(controllers: string[], esm: boolean, resolvedOptions: CompilerOptions): Program {
     const allGlobFiles = importClassesFromDirectories(controllers, esm ? ['.mts', '.ts', '.cts'] : ['.ts']);
     if (allGlobFiles.length === 0) {
       throw new GenerateMetadataError(`[${controllers.join(', ')}] globs found 0 controllers.`);
     }
 
-    return createProgram(allGlobFiles, this.compilerOptions || {});
+    return createProgram(allGlobFiles, resolvedOptions);
   }
 
   private extractNodeFromProgramSourceFiles() {
