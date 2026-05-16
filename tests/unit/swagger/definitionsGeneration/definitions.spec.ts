@@ -700,6 +700,11 @@ describe('Definition generation', () => {
               type: 'object',
             });
           },
+          nullableRecord: (propertyName, propertySchema) => {
+            // Swagger 2.0 cannot express Record<string, string | null> | null as a typed union;
+            // it degrades to { type: 'object' } due to the outer | null union limitation.
+            expect(propertySchema.type).to.eq('object', `for property ${propertyName}.type`);
+          },
           modelsObjectIndirect: (propertyName, propertySchema) => {
             expect(propertySchema.$ref).to.eq('#/definitions/TestSubModelContainer', `for property ${propertyName}.$ref`);
             expect(propertySchema).to.not.haveOwnProperty('additionalProperties', `for property ${propertyName}`);
