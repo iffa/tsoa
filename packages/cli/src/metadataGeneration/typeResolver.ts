@@ -262,6 +262,26 @@ export class TypeResolver {
             dataType: 'nestedObjectLiteral',
             properties,
           };
+
+          // For pure-dictionary mapped types with a string key (e.g. Record<string, V>),
+          // read the value type directly from the AST. This preserves union members like
+          // null/undefined that TypeScript's getIndexInfosOfType can strip when
+          // strictNullChecks is off, making Record<string, string | null> behave the same
+          // as the equivalent index-signature form { [k: string]: string | null }.
+          // We resolve the constraint via lightweight context-only lookup (not full TypeResolver)
+          // to avoid infinite recursion on complex mapped types like Partial<T>.
+          if (objectLiteral.properties.length === 0 && mappedTypeNode.type !== undefined) {
+            const constraintNode = mappedTypeNode.typeParameter.constraint;
+            if (constraintNode !== undefined && this.isStringConstraintNode(constraintNode)) {
+              try {
+                objectLiteral.additionalProperties = new TypeResolver(mappedTypeNode.type, this.current, mappedTypeNode, this.context).resolve();
+                return objectLiteral;
+              } catch (_error) {
+                // Fall through to getIndexInfosOfType
+              }
+            }
+          }
+
           const indexInfos = this.current.typeChecker.getIndexInfosOfType(type);
           const indexTypes = indexInfos.flatMap(indexInfo => {
             const typeNode = this.current.typeChecker.typeToTypeNode(indexInfo.type, undefined, ts.NodeBuilderFlags.NoTruncation)!;
@@ -550,6 +570,22 @@ export class TypeResolver {
         throwUnless(Object.prototype.hasOwnProperty.call(typeNode.literal, 'text'), new GenerateMetadataError(`Couldn't resolve literal node: ${typeNode.literal.getText()}`));
         return (typeNode.literal as ts.LiteralExpression).text;
     }
+  }
+
+  // Checks whether a mapped-type constraint node resolves to the string primitive via
+  // lightweight context-only substitution, without invoking the full TypeResolver which
+  // can cause infinite recursion on complex constraint expressions like `keyof T`.
+  private isStringConstraintNode(node: ts.TypeNode): boolean {
+    if (node.kind === ts.SyntaxKind.StringKeyword) {
+      return true;
+    }
+    if (ts.isTypeReferenceNode(node) && ts.isIdentifier(node.typeName)) {
+      const bound = this.context[node.typeName.text];
+      if (bound) {
+        return this.isStringConstraintNode(bound.type);
+      }
+    }
+    return false;
   }
 
   private getDesignatedModels<T extends ts.Node>(nodes: T[], typeName: string): T[] {
