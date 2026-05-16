@@ -1763,6 +1763,13 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               type: 'object',
             });
           },
+          nullableRecord: (propertyName, propertySchema) => {
+            expect((propertySchema as any).allOf)
+              .to.be.an('array')
+              .with.length(1);
+            expect(((propertySchema as any).allOf[0] ).$ref).to.eq('#/components/schemas/Record_string.string-or-null_');
+            expect((propertySchema as any).nullable).to.eq(true);
+          },
           modelsObjectIndirect: (propertyName, propertySchema) => {
             expect(propertySchema.$ref).to.eq('#/components/schemas/TestSubModelContainer', `for property ${propertyName}.$ref`);
             expect(propertySchema).to.not.haveOwnProperty('additionalProperties', `for property ${propertyName}`);
