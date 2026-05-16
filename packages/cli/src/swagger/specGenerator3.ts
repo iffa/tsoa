@@ -511,8 +511,9 @@ export class SpecGenerator3 extends SpecGenerator {
       parameter.schema.format = this.throwIfNotDataFormat(parameterType.format);
     }
 
-    if (parameterType.$ref) {
-      parameter.schema = parameterType as Swagger.Schema3;
+    const schema3Type = parameterType as Swagger.Schema3;
+    if (schema3Type.$ref || schema3Type.allOf || schema3Type.anyOf) {
+      parameter.schema = schema3Type;
       return Object.assign(parameter, this.buildExamples(source));
     }
 
@@ -531,6 +532,9 @@ export class SpecGenerator3 extends SpecGenerator {
       }
       parameter.schema.items = parameterType.items;
       parameter.schema.enum = parameterType.enum;
+      if (schema3Type.nullable !== undefined) {
+        parameter.schema.nullable = schema3Type.nullable;
+      }
     }
 
     parameter.schema = Object.assign({}, parameter.schema, validatorObjs);

@@ -126,6 +126,20 @@ export const UserEventSchema = z.discriminatedUnion('type', [UserCreatedEventSch
 
 export type UserEvent = z.infer<typeof UserEventSchema>;
 
+// Nullable enum queries test
+export enum SportCategory {
+  Football = 'football',
+  Basketball = 'basketball',
+  Tennis = 'tennis',
+}
+
+export interface NullableEnumQueriesParams {
+  sport?: SportCategory | null;
+  name?: string | null;
+  // explicit union form without ?: — same nullable semantics, different syntax
+  description: string | null | undefined;
+}
+
 @Route('ComplexType')
 export class ComplexTypeController {
   /**
@@ -264,5 +278,13 @@ export class ComplexTypeController {
       event: body,
       message: `User ${body.userId} deleted successfully`,
     };
+  }
+
+  /**
+   * Test @Queries with nullable enum property
+   */
+  @Get('NullableEnumQueries')
+  public async getNullableEnumQueries(@Queries() query: NullableEnumQueriesParams): Promise<{ sport: SportCategory | null | undefined; name: string | undefined }> {
+    return query;
   }
 }

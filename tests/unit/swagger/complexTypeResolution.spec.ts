@@ -212,6 +212,56 @@ describe('Complex Type Resolution for OpenAPI 3.0.0', () => {
         });
       });
 
+      describe('Nullable enum queries', () => {
+        it('should generate a proper schema for a nullable enum property in @Queries, not {}', () => {
+          const path = currentSpec.spec.paths['/ComplexType/NullableEnumQueries'];
+          expect(path).to.exist;
+          expect(path.get).to.exist;
+
+          const operation = path.get!;
+          expect(operation.parameters).to.be.an('array');
+
+          const sportParam = operation.parameters!.find(p => p.name === 'sport');
+          expect(sportParam, 'sport parameter should exist').to.exist;
+          expect(sportParam!.in).to.equal('query');
+          expect(sportParam!.required).to.equal(false);
+
+          const schema = sportParam!.schema as Swagger.Schema3;
+          expect(schema, 'schema should not be empty {}').to.not.deep.equal({});
+          expect(schema.nullable, 'schema should be nullable').to.equal(true);
+          expect(schema.allOf, 'schema should use allOf to wrap $ref').to.be.an('array').with.length(1);
+          expect((schema.allOf![0] as Swagger.Schema3).$ref).to.match(/SportCategory/);
+        });
+
+        it('should generate a proper schema for a nullable primitive property in @Queries (?: string | null), not {}', () => {
+          const path = currentSpec.spec.paths['/ComplexType/NullableEnumQueries'];
+          expect(path).to.exist;
+
+          const operation = path.get!;
+          const nameParam = operation.parameters!.find(p => p.name === 'name');
+          expect(nameParam, 'name parameter should exist').to.exist;
+          expect(nameParam!.required).to.equal(false);
+
+          const schema = nameParam!.schema as Swagger.Schema3;
+          expect(schema.type).to.equal('string');
+          expect(schema.nullable, 'string | null should have nullable: true').to.equal(true);
+        });
+
+        it('should generate a proper schema for string | null | undefined (explicit union, no ?) in @Queries, not {}', () => {
+          const path = currentSpec.spec.paths['/ComplexType/NullableEnumQueries'];
+          expect(path).to.exist;
+
+          const operation = path.get!;
+          const descParam = operation.parameters!.find(p => p.name === 'description');
+          expect(descParam, 'description parameter should exist').to.exist;
+
+          const schema = descParam!.schema as Swagger.Schema3;
+          expect(schema, 'schema should not be empty {}').to.not.deep.equal({});
+          expect(schema.type).to.equal('string');
+          expect(schema.nullable, 'string | null | undefined should have nullable: true').to.equal(true);
+        });
+      });
+
       describe('Discriminated union types', () => {
         it('should generate correct OpenAPI spec for @Body with discriminated union', () => {
           const path = currentSpec.spec.paths['/ComplexType/DiscriminatedUnionBody'];
