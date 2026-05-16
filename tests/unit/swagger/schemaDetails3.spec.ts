@@ -1777,6 +1777,24 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               type: 'object',
             });
           },
+          nullableValueRecord: (propertyName, propertySchema) => {
+            expect(propertySchema.$ref).to.eq('#/components/schemas/Record_string.string-or-null_', `for property ${propertyName}.$ref`);
+            const schema = getComponentSchema('Record_string.string-or-null_', currentSpec);
+            // Record<string, string | null> must preserve null in additionalProperties
+            // (regression: getIndexInfosOfType strips null when strictNullChecks is off)
+            expect(schema).to.be.deep.eq({
+              additionalProperties: {
+                nullable: true,
+                type: 'string',
+              },
+              default: undefined,
+              description: 'Construct a type with a set of properties K of type T',
+              example: undefined,
+              format: undefined,
+              properties: {},
+              type: 'object',
+            });
+          },
           modelsObjectIndirect: (propertyName, propertySchema) => {
             expect(propertySchema.$ref).to.eq('#/components/schemas/TestSubModelContainer', `for property ${propertyName}.$ref`);
             expect(propertySchema).to.not.haveOwnProperty('additionalProperties', `for property ${propertyName}`);
