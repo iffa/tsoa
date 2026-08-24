@@ -5,6 +5,33 @@ import { TsoaRoute, isDefaultForAdditionalPropertiesAllowed } from './tsoa-route
 import { Tsoa } from '../metadataGeneration/tsoa';
 import ValidatorKey = Tsoa.ValidatorKey;
 
+/**
+ * validator's isFloat builds this expression on every call, and its toFloat then calls
+ * isFloat again, which made two regular expression compilations the dominant cost of
+ * validating a numeric parameter. The expression and the values it has to reject anyway are
+ * lifted verbatim from validator so the accepted set is unchanged.
+ */
+const floatPattern = /^(?:[-+])?(?:[0-9]+)?(?:\.[0-9]*)?(?:[eE][+-]?(?:[0-9]+))?$/;
+const notFloats = new Set(['', '.', ',', '-', '+']);
+
+/**
+ * The finite number a string denotes, or undefined when it denotes no usable number. The
+ * expression accepts a few strings that hold no digits at all - 'e3', '.e1' - which
+ * parseFloat turns into NaN, so the result has to be checked rather than trusted.
+ */
+function toFiniteNumber(value: string, parse: (value: string) => number): number | undefined {
+  const parsed = parse(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function toFloatValue(value: string): number | undefined {
+  if (notFloats.has(value) || !floatPattern.test(value)) {
+    return undefined;
+  }
+
+  return toFiniteNumber(value, parseFloat);
+}
+
 // for backwards compatibility with custom templates
 export function ValidateParam(
   property: TsoaRoute.PropertySchema,
@@ -184,7 +211,9 @@ export class ValidationService {
   }
 
   public validateInt(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, validators?: IntegerValidator, parent = '') {
-    if (!this.hasCorrectJsType(value, 'number', isBodyParam) || !validator.isInt(String(value))) {
+    const stringValue = String(value);
+    const intValue = validator.isInt(stringValue) ? toFiniteNumber(stringValue, text => parseInt(text, 10)) : undefined;
+    if (!this.hasCorrectJsType(value, 'number', isBodyParam) || intValue === undefined) {
       let message = `invalid integer number`;
       if (validators) {
         if (validators.isInt && validators.isInt.errorMsg) {
@@ -201,7 +230,7 @@ export class ValidationService {
       return;
     }
 
-    const numberValue = validator.toInt(String(value), 10);
+    const numberValue = intValue;
     if (!validators) {
       return numberValue;
     }
@@ -227,7 +256,9 @@ export class ValidationService {
   }
 
   public validateFloat(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, validators?: FloatValidator, parent = '') {
-    if (!this.hasCorrectJsType(value, 'number', isBodyParam) || !validator.isFloat(String(value))) {
+    const stringValue = String(value);
+    const floatValue = toFloatValue(stringValue);
+    if (!this.hasCorrectJsType(value, 'number', isBodyParam) || floatValue === undefined) {
       let message = 'invalid float number';
       if (validators) {
         if (validators.isFloat && validators.isFloat.errorMsg) {
@@ -244,7 +275,7 @@ export class ValidationService {
       return;
     }
 
-    const numberValue = validator.toFloat(String(value));
+    const numberValue = floatValue;
     if (!validators) {
       return numberValue;
     }
