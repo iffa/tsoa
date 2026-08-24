@@ -31,6 +31,24 @@ type ExpressReturnHandlerParameters = {
 };
 
 export class ExpressTemplateService extends TemplateService<ExpressApiHandlerParameters, ExpressValidationArgsParameters, ExpressReturnHandlerParameters> {
+  /**
+   * The generated routes build one `args` object per route at registration time and hand
+   * back that same object on every request, so the parameter list derived from it is stable
+   * and worth caching. A caller that builds a fresh object per request simply never hits.
+   */
+  private static readonly parameterLists = new WeakMap<object, TsoaRoute.ParameterSchema[]>();
+
+  private getParameters(args: Record<string, TsoaRoute.ParameterSchema>): TsoaRoute.ParameterSchema[] {
+    let parameters = ExpressTemplateService.parameterLists.get(args);
+
+    if (!parameters) {
+      parameters = Object.values(args);
+      ExpressTemplateService.parameterLists.set(args, parameters);
+    }
+
+    return parameters;
+  }
+
   async apiHandler(params: ExpressApiHandlerParameters) {
     const { methodName, controller, response, validatedArgs, successStatus, next } = params;
 
@@ -53,7 +71,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
     const { args, request, response } = params;
 
     const fieldErrors: FieldErrors = {};
-    const values = Object.values(args).map(param => {
+    const values = this.getParameters(args).map(param => {
       const name = param.name;
       switch (param.in) {
         case 'request':
@@ -88,7 +106,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
           return bodyPropArgs;
         }
         case 'formData': {
-          const files = Object.values(args).filter(p => p.dataType === 'file' || (p.dataType === 'array' && p.array && p.array.dataType === 'file'));
+          const files = this.getParameters(args).filter(p => p.dataType === 'file' || (p.dataType === 'array' && p.array && p.array.dataType === 'file'));
           if ((param.dataType === 'file' || (param.dataType === 'array' && param.array && param.array.dataType === 'file')) && files.length > 0) {
             const requestFiles = request.files as { [fileName: string]: Express.Multer.File[] } | undefined;
 
