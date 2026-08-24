@@ -32,6 +32,123 @@ function toFloatValue(value: string): number | undefined {
   return toFiniteNumber(value, parseFloat);
 }
 
+/**
+ * A model's property names, cached against the schema's `properties` object. The generated
+ * routes declare that object once, so the name set behind it never changes, while validation
+ * needs it for every object it walks.
+ */
+const propertyNames = new WeakMap<object, Set<string>>();
+
+function propertyNamesOf(properties: { [name: string]: unknown }): Set<string> {
+  let names = propertyNames.get(properties);
+
+  if (!names) {
+    names = new Set(Object.keys(properties));
+    propertyNames.set(properties, names);
+  }
+
+  return names;
+}
+
+/**
+ * A model's properties as an entry list, cached the same way, so walking them does not
+ * rebuild the list per object.
+ */
+const propertyEntries = new WeakMap<object, Array<[string, TsoaRoute.PropertySchema]>>();
+
+function propertyEntriesOf(properties: { [name: string]: TsoaRoute.PropertySchema }): Array<[string, TsoaRoute.PropertySchema]> {
+  let entries = propertyEntries.get(properties);
+
+  if (!entries) {
+    entries = Object.entries(properties);
+    propertyEntries.set(properties, entries);
+  }
+
+  return entries;
+}
+
+/** Whether any field failed, without building the array of keys to count it. */
+function hasFieldErrors(fieldErrors: FieldErrors): boolean {
+  for (const key in fieldErrors) {
+    if (Object.prototype.hasOwnProperty.call(fieldErrors, key)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/** How many fields failed, without building the array of keys to count them. */
+function countFieldErrors(fieldErrors: FieldErrors): number {
+  let count = 0;
+
+  for (const key in fieldErrors) {
+    if (Object.prototype.hasOwnProperty.call(fieldErrors, key)) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+/**
+ * Whether a model can reach itself, cached per model set. Only a model that can is able to
+ * recurse, so only that one needs the guard ValidateParam keeps against circular values -
+ * and the guard costs a string and two set operations at every reference it walks.
+ */
+const recursiveRefs = new WeakMap<object, Map<string, boolean>>();
+
+function isRecursiveRef(models: TsoaRoute.Models, ref: string): boolean {
+  let known = recursiveRefs.get(models);
+
+  if (!known) {
+    known = new Map();
+    recursiveRefs.set(models, known);
+  }
+
+  const cached = known.get(ref);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const recursive = canReachRef(models, ref, ref, new Set());
+  known.set(ref, recursive);
+  return recursive;
+}
+
+function canReachRef(models: TsoaRoute.Models, from: string, target: string, visited: Set<string>): boolean {
+  if (visited.has(from)) {
+    return false;
+  }
+  visited.add(from);
+
+  const model = models[from];
+  if (!model) {
+    return false;
+  }
+
+  if (model.dataType === 'refEnum') {
+    return false;
+  }
+
+  const schemas = model.dataType === 'refAlias' ? [model.type] : Object.values(model.properties);
+  return schemas.some(schema => schemaReachesRef(models, schema, target, visited));
+}
+
+function schemaReachesRef(models: TsoaRoute.Models, schema: TsoaRoute.PropertySchema | boolean | undefined, target: string, visited: Set<string>): boolean {
+  if (!schema || typeof schema === 'boolean') {
+    return false;
+  }
+
+  if (schema.ref) {
+    return schema.ref === target || canReachRef(models, schema.ref, target, visited);
+  }
+
+  const children: Array<TsoaRoute.PropertySchema | boolean | undefined> = [schema.array, schema.additionalProperties, ...(schema.subSchemas || []), ...Object.values(schema.nestedProperties || {})];
+
+  return children.some(child => schemaReachesRef(models, child, target, visited));
+}
+
 // for backwards compatibility with custom templates
 export function ValidateParam(
   property: TsoaRoute.PropertySchema,
@@ -116,6 +233,14 @@ export class ValidationService {
         return this.validateNestedObjectLiteral(name, value, fieldErrors, isBodyParam, property.nestedProperties, property.additionalProperties, parent);
       default:
         if (property.ref) {
+          const modelDefinition = this.models[property.ref];
+
+          // Only a model that can reach itself is able to recurse, so the guard below is
+          // skipped for the models that cannot.
+          if (!isRecursiveRef(this.models, property.ref)) {
+            return this.validateModel({ name, value, modelDefinition, fieldErrors, isBodyParam, parent });
+          }
+
           // Detect circular references to prevent stack overflow
           const refPath = `${parent}${name}:${property.ref}`;
           if (this.validationStack.has(refPath)) {
@@ -124,7 +249,7 @@ export class ValidationService {
 
           this.validationStack.add(refPath);
           try {
-            return this.validateModel({ name, value, modelDefinition: this.models[property.ref], fieldErrors, isBodyParam, parent });
+            return this.validateModel({ name, value, modelDefinition, fieldErrors, isBodyParam, parent });
           } finally {
             this.validationStack.delete(refPath);
           }
@@ -154,7 +279,7 @@ export class ValidationService {
       return;
     }
 
-    const previousErrors = Object.keys(fieldErrors).length;
+    const previousErrors = countFieldErrors(fieldErrors);
 
     if (!nestedProperties) {
       throw new Error(
@@ -167,7 +292,7 @@ export class ValidationService {
 
     const propHandling = this.config.noImplicitAdditionalProperties;
     if (propHandling !== 'ignore') {
-      const excessProps = this.getExcessPropertiesFor({ dataType: 'refObject', properties: nestedProperties, additionalProperties }, Object.keys(value));
+      const excessProps = additionalProperties ? [] : Object.keys(value).filter(key => !propertyNamesOf(nestedProperties).has(key));
       if (excessProps.length > 0) {
         if (propHandling === 'silently-remove-extras') {
           excessProps.forEach(excessProp => {
@@ -183,19 +308,21 @@ export class ValidationService {
       }
     }
 
-    Object.keys(nestedProperties).forEach(key => {
-      const validatedProp = this.ValidateParam(nestedProperties[key], value[key], key, fieldErrors, isBodyParam, parent + name + '.');
+    const childPath = parent + name + '.';
+
+    for (const [key, nestedProperty] of propertyEntriesOf(nestedProperties)) {
+      const validatedProp = this.ValidateParam(nestedProperty, value[key], key, fieldErrors, isBodyParam, childPath);
 
       // Add value from validator if it's not undefined or if value is required and unfedined is valid type
-      if (validatedProp !== undefined || (nestedProperties[key].dataType === 'undefined' && nestedProperties[key].required)) {
+      if (validatedProp !== undefined || (nestedProperty.dataType === 'undefined' && nestedProperty.required)) {
         value[key] = validatedProp;
       }
-    });
+    }
 
     if (typeof additionalProperties === 'object' && typeof value === 'object') {
       const keys = Object.keys(value).filter(key => typeof nestedProperties[key] === 'undefined');
       keys.forEach(key => {
-        const validatedProp = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, parent + name + '.');
+        const validatedProp = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, childPath);
         // Add value from validator if it's not undefined or if value is required and unfedined is valid type
         if (validatedProp !== undefined || (additionalProperties.dataType === 'undefined' && additionalProperties.required)) {
           value[key] = validatedProp;
@@ -203,7 +330,7 @@ export class ValidationService {
       });
     }
 
-    if (Object.keys(fieldErrors).length > previousErrors) {
+    if (countFieldErrors(fieldErrors) > previousErrors) {
       return;
     }
 
@@ -495,16 +622,17 @@ export class ValidationService {
     }
 
     let arrayValue = [] as any[];
-    const previousErrors = Object.keys(fieldErrors).length;
+    const previousErrors = countFieldErrors(fieldErrors);
+    const childPath = name + '.';
     if (Array.isArray(value)) {
       arrayValue = value.map((elementValue, index) => {
-        return this.ValidateParam(schema, elementValue, `$${index}`, fieldErrors, isBodyParam, name + '.');
+        return this.ValidateParam(schema, elementValue, `$${index}`, fieldErrors, isBodyParam, childPath);
       });
     } else {
-      arrayValue = [this.ValidateParam(schema, value, '$0', fieldErrors, isBodyParam, name + '.')];
+      arrayValue = [this.ValidateParam(schema, value, '$0', fieldErrors, isBodyParam, childPath)];
     }
 
-    if (Object.keys(fieldErrors).length > previousErrors) {
+    if (countFieldErrors(fieldErrors) > previousErrors) {
       return;
     }
 
@@ -574,17 +702,21 @@ export class ValidationService {
     const subFieldErrors: FieldErrors[] = [];
     const propertyCount = value !== null && typeof value === 'object' ? Object.keys(value).length : 0;
     let best: { value: any; retained: number } | undefined;
+    // The union's own validators have to reach each member, but a union rarely carries any,
+    // and without them the merged schema is the member itself.
+    const unionValidators = property.validators && Object.keys(property.validators).length > 0 ? property.validators : undefined;
 
     for (const subSchema of property.subSchemas) {
       const subFieldError: FieldErrors = {};
+      const memberSchema = unionValidators ? { ...subSchema, validators: { ...unionValidators, ...subSchema.validators } } : subSchema;
 
       // Clean value if it's not undefined or use undefined directly if it's undefined.
       // Value can be undefined if undefined is allowed datatype of the union
       const validateableValue = value !== undefined ? this.deepClone(value) : value;
-      const cleanValue = this.ValidateParam({ ...subSchema, validators: { ...property.validators, ...subSchema.validators } }, validateableValue, name, subFieldError, isBodyParam, parent);
+      const cleanValue = this.ValidateParam(memberSchema, validateableValue, name, subFieldError, isBodyParam, parent);
       subFieldErrors.push(subFieldError);
 
-      if (Object.keys(subFieldError).length !== 0) {
+      if (hasFieldErrors(subFieldError)) {
         continue;
       }
 
@@ -644,7 +776,7 @@ export class ValidationService {
       subFieldErrors.push(subFieldError);
     });
 
-    const filtered = subFieldErrors.filter(subFieldError => Object.keys(subFieldError).length !== 0);
+    const filtered = subFieldErrors.filter(hasFieldErrors);
 
     if (filtered.length > 0) {
       this.addSummarizedError(fieldErrors, parent + name, 'Could not match the intersection against every type. Issues: ', filtered, value);
@@ -780,20 +912,17 @@ export class ValidationService {
   }
 
   private getExcessPropertiesFor(modelDefinition: TsoaRoute.RefObjectModelSchema, properties: string[]): string[] {
-    const modelProperties = new Set(Object.keys(modelDefinition.properties));
-
-    if (modelDefinition.additionalProperties) {
+    if (modelDefinition.additionalProperties || this.config.noImplicitAdditionalProperties === 'ignore') {
       return [];
-    } else if (this.config.noImplicitAdditionalProperties === 'ignore') {
-      return [];
-    } else {
-      return [...properties].filter(property => !modelProperties.has(property));
     }
+
+    const modelProperties = propertyNamesOf(modelDefinition.properties);
+    return properties.filter(property => !modelProperties.has(property));
   }
 
   public validateModel(input: { name: string; value: any; modelDefinition: TsoaRoute.ModelSchema; fieldErrors: FieldErrors; isBodyParam: boolean; parent?: string }): any {
     const { name, value, modelDefinition, fieldErrors, isBodyParam, parent = '' } = input;
-    const previousErrors = Object.keys(fieldErrors).length;
+    const previousErrors = countFieldErrors(fieldErrors);
 
     if (modelDefinition) {
       if (modelDefinition.dataType === 'refEnum') {
@@ -815,21 +944,22 @@ export class ValidationService {
       }
 
       const properties = modelDefinition.properties || {};
-      const keysOnPropertiesModelDefinition = new Set(Object.keys(properties));
-      const allPropertiesOnData = new Set(Object.keys(value));
+      const keysOnPropertiesModelDefinition = propertyNamesOf(properties);
 
-      Object.entries(properties).forEach(([key, property]) => {
-        const validatedParam = this.ValidateParam(property, value[key], key, fieldErrors, isBodyParam, fieldPath + '.');
+      const childPath = fieldPath + '.';
+
+      for (const [key, property] of propertyEntriesOf(properties)) {
+        const validatedParam = this.ValidateParam(property, value[key], key, fieldErrors, isBodyParam, childPath);
 
         // Add value from validator if it's not undefined or if value is required and unfedined is valid type
         if (validatedParam !== undefined || (property.dataType === 'undefined' && property.required)) {
           value[key] = validatedParam;
         }
-      });
+      }
 
-      const isAnExcessProperty = (objectKeyThatMightBeExcess: string) => {
-        return allPropertiesOnData.has(objectKeyThatMightBeExcess) && !keysOnPropertiesModelDefinition.has(objectKeyThatMightBeExcess);
-      };
+      // Only keys read off the value reach this, and a key the loop above added is a model
+      // property, so belonging to the value no longer has to be checked.
+      const isAnExcessProperty = (objectKeyThatMightBeExcess: string) => !keysOnPropertiesModelDefinition.has(objectKeyThatMightBeExcess);
 
       const additionalProperties = modelDefinition.additionalProperties;
 
@@ -855,7 +985,7 @@ export class ValidationService {
       } else {
         Object.keys(value).forEach((key: string) => {
           if (isAnExcessProperty(key)) {
-            const validatedValue = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, fieldPath + '.');
+            const validatedValue = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, childPath);
             // Add value from validator if it's not undefined or if value is required and unfedined is valid type
             if (validatedValue !== undefined || (additionalProperties.dataType === 'undefined' && additionalProperties.required)) {
               value[key] = validatedValue;
@@ -870,7 +1000,7 @@ export class ValidationService {
       }
     }
 
-    if (Object.keys(fieldErrors).length > previousErrors) {
+    if (countFieldErrors(fieldErrors) > previousErrors) {
       return;
     }
 
