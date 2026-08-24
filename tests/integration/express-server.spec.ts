@@ -20,6 +20,7 @@ import {
   ValidateModel,
 } from '../fixtures/testModel';
 import { verifyRequest, verifyGetRequest, verifyPostRequest, verifyFileUploadRequest } from './utils';
+import * as request from 'supertest';
 
 const basePath = '/v1';
 
@@ -289,6 +290,17 @@ describe('Express Server', () => {
       expect(res.text).to.equal('testbuffer');
       return;
     });
+  });
+
+  it('aborts the request when a streamed response fails', () => {
+    // Without pipeline the stream's error event is unhandled and takes the process down.
+    return request(app)
+      .get(`${basePath}/GetTest/HandleStreamFailure`)
+      .then(() => undefined)
+      .catch((error: NodeJS.ErrnoException) => error)
+      .then(error => {
+        expect(error?.code).to.equal('ECONNRESET');
+      });
   });
 
   it('should reject invalid additionalProperties', () => {
@@ -1169,14 +1181,14 @@ describe('Express Server', () => {
         return verifyPostRequest(
           app,
           basePath + `/Validate/body-prop`,
-          { 'name': 'Nick Yang' },
+          { name: 'Nick Yang' },
           (_err, res) => {
             const { body } = res;
 
-            expect(body.name).to.equal("Nick Yang-validated");
+            expect(body.name).to.equal('Nick Yang-validated');
           },
           200,
-        )
+        );
       });
 
       it('should invalid body props missing required field', () => {
@@ -1191,22 +1203,22 @@ describe('Express Server', () => {
             expect(body.fields['body.name'].value).to.be.undefined;
           },
           400,
-        )
+        );
       });
 
       it('should invalid body props incorrect type', () => {
         return verifyPostRequest(
           app,
           basePath + `/Validate/body-prop`,
-          { 'name': 1234 },
+          { name: 1234 },
           (err, _res) => {
             const body = JSON.parse(err.text);
 
-            expect(body.fields['body.name'].message).to.equal("invalid string value");
+            expect(body.fields['body.name'].message).to.equal('invalid string value');
             expect(body.fields['body.name'].value).to.be.undefined;
           },
           400,
-        )
+        );
       });
     });
 

@@ -5,7 +5,7 @@ import { FieldErrors } from '../../templateHelpers';
 import { TsoaRoute } from '../../tsoa-route';
 import { ValidateError } from '../../templateHelpers';
 import { TemplateService } from '../templateService';
-import { Readable } from 'node:stream';
+import { Readable, pipeline } from 'node:stream';
 
 type ExpressApiHandlerParameters = {
   methodName: string;
@@ -27,6 +27,7 @@ type ExpressReturnHandlerParameters = {
   headers: any;
   statusCode?: number;
   data?: any;
+  next?: ExNext;
 };
 
 export class ExpressTemplateService extends TemplateService<ExpressApiHandlerParameters, ExpressValidationArgsParameters, ExpressReturnHandlerParameters> {
@@ -42,7 +43,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
         statusCode = controller.getStatus() || statusCode;
       }
 
-      this.returnHandler({ response, headers, statusCode, data });
+      this.returnHandler({ response, headers, statusCode, data, next });
     } catch (error) {
       return next(error);
     }
@@ -101,7 +102,9 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
         }
         case 'res':
           return (status: number | undefined, data: any, headers: any) => {
-            this.returnHandler({ response, headers, statusCode: status, data });
+            // request.next is express's own handle on the middleware chain; getValidatedArgs
+            // is not handed one.
+            this.returnHandler({ response, headers, statusCode: status, data, next: request.next });
           };
       }
     });
@@ -113,7 +116,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
   }
 
   protected returnHandler(params: ExpressReturnHandlerParameters) {
-    const { response, statusCode, data } = params;
+    const { response, statusCode, data, next } = params;
     let { headers } = params;
     headers = headers || {};
 
@@ -129,7 +132,14 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
 
     if (data && typeof data.pipe === 'function' && data.readable && typeof data._read === 'function') {
       response.status(statusCode || 200);
-      (data as Readable).pipe(response);
+      // pipeline, unlike pipe, destroys the response when the stream fails, so a failing
+      // stream aborts the request instead of raising an unhandled error event.
+      pipeline(data as Readable, response, error => {
+        // A client that hangs up mid-stream is not an application error.
+        if (error && error.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
+          next?.(error);
+        }
+      });
     } else if (data !== undefined && (data !== null || isJsonResponse)) {
       // allow null response when it is a json response
       if (typeof data === 'number' || isJsonResponse) {
