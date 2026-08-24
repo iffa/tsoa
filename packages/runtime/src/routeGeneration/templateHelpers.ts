@@ -966,22 +966,29 @@ export class ValidationService {
       if (additionalProperties === true || isDefaultForAdditionalPropertiesAllowed(additionalProperties)) {
         // then don't validate any of the additional properties
       } else if (additionalProperties === false) {
-        Object.keys(value).forEach((key: string) => {
-          if (isAnExcessProperty(key)) {
-            if (this.config.noImplicitAdditionalProperties === 'throw-on-extras') {
+        const propHandling = this.config.noImplicitAdditionalProperties;
+
+        if (propHandling !== 'ignore') {
+          const keys = Object.keys(value);
+
+          for (let index = 0; index < keys.length; index++) {
+            const key = keys[index];
+            if (!isAnExcessProperty(key)) {
+              continue;
+            }
+
+            if (propHandling === 'throw-on-extras') {
               fieldErrors[`${fieldPath}.${key}`] = {
                 message: `"${key}" is an excess property and therefore is not allowed`,
                 value: key,
               };
-            } else if (this.config.noImplicitAdditionalProperties === 'silently-remove-extras') {
+            } else if (propHandling === 'silently-remove-extras') {
               delete value[key];
-            } else if (this.config.noImplicitAdditionalProperties === 'ignore') {
-              // then it's okay to have additionalProperties
             } else {
-              assertNever(this.config.noImplicitAdditionalProperties);
+              assertNever(propHandling);
             }
           }
-        });
+        }
       } else {
         Object.keys(value).forEach((key: string) => {
           if (isAnExcessProperty(key)) {
