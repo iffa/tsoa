@@ -462,6 +462,26 @@ describe('ValidationService', () => {
       expect(result).to.equal(Number(value));
     });
 
+    it('rejects strings that hold no usable number', () => {
+      const service = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true });
+      const accepted = ['0', '-0', '+0', '1.5', '1.', '.1', '-.5', '1e3', '1E3', '1e+3', '-1.5E-10'];
+      // 'e3' and '.e1' hold no digits but still match the float expression, so they used to
+      // reach the controller as NaN.
+      const rejected = ['', '.', ',', '-', '+', 'e3', '.e1', '1e', '1e+', 'Infinity', 'NaN', '1,5', '0x10', '1_000', '1..2', ' 1', '1 ', '9'.repeat(400)];
+
+      for (const value of accepted) {
+        const error: FieldErrors = {};
+        expect(service.validateFloat('name', value, error, true), value).to.equal(parseFloat(value));
+        expect(error, value).to.deep.equal({});
+      }
+
+      for (const value of rejected) {
+        const error: FieldErrors = {};
+        expect(service.validateFloat('name', value, error, true), value).to.equal(undefined);
+        expect(error.name?.message, value).to.equal('invalid float number');
+      }
+    });
+
     it('should invalid float format', () => {
       const name = 'name';
       const value = 'Hello';
