@@ -32,6 +32,33 @@ export function getJSDocComments(node: ts.Node, tagName: string) {
   return comments;
 }
 
+/**
+ * The JSDoc tags tsoa reads as parameter-level validators. A validator tag has to name the
+ * parameter it applies to, so one without a comment is an error. Any other tag - `@returns`,
+ * `@deprecated`, `@summary` - is method-level and is allowed to stand on its own.
+ */
+export const parameterValidatorTagNames = [
+  'isString',
+  'isBoolean',
+  'isInt',
+  'isLong',
+  'isFloat',
+  'isDouble',
+  'isDate',
+  'isDateTime',
+  'minItems',
+  'maxItems',
+  'uniqueItems',
+  'minLength',
+  'maxLength',
+  'pattern',
+  'minimum',
+  'maximum',
+  'minDate',
+  'maxDate',
+  'title',
+];
+
 export function getJSDocTagNames(node: ts.Node, requireTagName = false) {
   let tags: ts.JSDocTag[];
   if (node.kind === ts.SyntaxKind.Parameter) {
@@ -40,7 +67,10 @@ export function getJSDocTagNames(node: ts.Node, requireTagName = false) {
       if (ts.isJSDocParameterTag(tag)) {
         return false;
       } else if (tag.comment === undefined) {
-        throw new GenerateMetadataError(`Orphan tag: @${String(tag.tagName.text || tag.tagName.escapedText)} should have a parameter name follows with.`);
+        if (parameterValidatorTagNames.includes(tag.tagName.text)) {
+          throw new GenerateMetadataError(`Orphan tag: @${String(tag.tagName.text || tag.tagName.escapedText)} should have a parameter name follows with.`);
+        }
+        return false;
       }
 
       return commentToString(tag.comment)?.startsWith(parameterName) || false;

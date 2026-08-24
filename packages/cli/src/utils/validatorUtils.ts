@@ -2,7 +2,7 @@ import { Tsoa } from '@tsoa/runtime';
 import * as ts from 'typescript';
 import validator from 'validator';
 import { GenerateMetadataError } from './../metadataGeneration/exceptions';
-import { commentToString, getJSDocTags } from './jsDocUtils';
+import { commentToString, getJSDocTags, parameterValidatorTagNames } from './jsDocUtils';
 
 export function getParameterValidators(parameter: ts.ParameterDeclaration, parameterName: string): Tsoa.Validators {
   if (!parameter.parent) {
@@ -13,7 +13,7 @@ export function getParameterValidators(parameter: ts.ParameterDeclaration, param
 
   const tags = getJSDocTags(parameter.parent, tag => {
     const { comment } = tag;
-    return getParameterTagSupport().some(value => !!commentToString(comment) && value === tag.tagName.text && getCommentValue(commentToString(comment)) === parameterName);
+    return parameterValidatorTagNames.some(value => !!commentToString(comment) && value === tag.tagName.text && getCommentValue(commentToString(comment)) === parameterName);
   });
 
   function getErrorMsg(comment?: string, isValue = true) {
@@ -104,7 +104,7 @@ export function getParameterValidators(parameter: ts.ParameterDeclaration, param
 
 export function getPropertyValidators(property: ts.Node): Tsoa.Validators | undefined {
   const tags = getJSDocTags(property, tag => {
-    return getParameterTagSupport().some(value => value === tag.tagName.text);
+    return parameterValidatorTagNames.some(value => value === tag.tagName.text);
   });
   function getValue(comment?: string) {
     if (!comment) {
@@ -208,30 +208,6 @@ export function getPropertyValidators(property: ts.Node): Tsoa.Validators | unde
     },
     {} as Tsoa.Validators & { [unknown: string]: { errorMsg: string; value: undefined } },
   );
-}
-
-function getParameterTagSupport() {
-  return [
-    'isString',
-    'isBoolean',
-    'isInt',
-    'isLong',
-    'isFloat',
-    'isDouble',
-    'isDate',
-    'isDateTime',
-    'minItems',
-    'maxItems',
-    'uniqueItems',
-    'minLength',
-    'maxLength',
-    'pattern',
-    'minimum',
-    'maximum',
-    'minDate',
-    'maxDate',
-    'title',
-  ];
 }
 
 function removeSurroundingQuotes(str: string) {
