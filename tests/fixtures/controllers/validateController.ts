@@ -1,5 +1,5 @@
 import { Body, BodyProp, Get, Post, Query, Route } from '@tsoa/runtime';
-import { ValidateMapStringToAny, ValidateMapStringToNumber, ValidateModel } from './../testModel';
+import { ExclusiveBoundsModel, ValidateMapStringToAny, ValidateMapStringToNumber, ValidateModel } from './../testModel';
 
 export interface ValidateDateResponse {
   minDateValue: Date;
@@ -135,6 +135,20 @@ export class ValidateController {
 
   @Post('body')
   public bodyValidate(@Body() body: ValidateModel): Promise<ValidateModel> {
+    return Promise.resolve(body);
+  }
+
+  /**
+   * @param value the value
+   * @exclusiveMinimum value 5 must be over 5
+   */
+  @Get('parameter/exclusiveMinimum')
+  public async exclusiveMinimumParameter(@Query() value: number): Promise<number> {
+    return value;
+  }
+
+  @Post('exclusiveBounds')
+  public exclusiveBoundsValidate(@Body() body: ExclusiveBoundsModel): Promise<ExclusiveBoundsModel> {
     return Promise.resolve(body);
   }
 

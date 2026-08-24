@@ -4,6 +4,8 @@ import { merge as deepMerge } from 'ts-deepmerge';
 
 import { ExtendedSpecConfig } from '../cli';
 import { UnspecifiedObject } from '../utils/unspecifiedObject';
+import { shouldIncludeValidatorInSchema } from '../utils/validatorUtils';
+import { ValidatorSchema } from './specGenerator';
 import { SpecGenerator3 } from './specGenerator3';
 
 /**
@@ -48,6 +50,25 @@ export class SpecGenerator31 extends SpecGenerator3 {
     }
 
     return spec;
+  }
+
+  protected override get specVersionName(): string {
+    return 'OpenAPI 3.1';
+  }
+
+  /**
+   * OpenAPI 3.1 follows JSON Schema 2020-12, where an exclusive bound is a number rather
+   * than a boolean modifier on minimum/maximum, so the validators pass straight through and
+   * an inclusive and an exclusive bound can sit side by side.
+   */
+  protected override buildValidatorSchema(validators: Tsoa.Validators): ValidatorSchema {
+    const schema: Record<string, unknown> = {};
+
+    for (const key of Object.keys(validators).filter(shouldIncludeValidatorInSchema)) {
+      schema[key] = validators[key]!.value;
+    }
+
+    return schema as ValidatorSchema;
   }
 
   /**

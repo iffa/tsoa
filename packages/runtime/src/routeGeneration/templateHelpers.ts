@@ -210,6 +210,27 @@ export class ValidationService {
     return value;
   }
 
+  /**
+   * The first numeric bound the value breaks, or undefined when it is within all of them.
+   * `minimum`/`maximum` are inclusive; `exclusiveMinimum`/`exclusiveMaximum` are not.
+   */
+  private checkNumberBounds(numberValue: number, validators: IntegerValidator | FloatValidator): string | undefined {
+    const bounds = [
+      { validator: validators.minimum, broken: (bound: number) => bound > numberValue, message: (bound: number) => `min ${bound}` },
+      { validator: validators.maximum, broken: (bound: number) => bound < numberValue, message: (bound: number) => `max ${bound}` },
+      { validator: validators.exclusiveMinimum, broken: (bound: number) => bound >= numberValue, message: (bound: number) => `exclusiveMin ${bound}` },
+      { validator: validators.exclusiveMaximum, broken: (bound: number) => bound <= numberValue, message: (bound: number) => `exclusiveMax ${bound}` },
+    ];
+
+    for (const bound of bounds) {
+      if (bound.validator?.value !== undefined && bound.broken(bound.validator.value)) {
+        return bound.validator.errorMsg || bound.message(bound.validator.value);
+      }
+    }
+
+    return undefined;
+  }
+
   public validateInt(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, validators?: IntegerValidator, parent = '') {
     const stringValue = String(value);
     const intValue = validator.isInt(stringValue) ? toFiniteNumber(stringValue, text => parseInt(text, 10)) : undefined;
@@ -234,24 +255,16 @@ export class ValidationService {
     if (!validators) {
       return numberValue;
     }
-    if (validators.minimum && validators.minimum.value !== undefined) {
-      if (validators.minimum.value > numberValue) {
-        fieldErrors[parent + name] = {
-          message: validators.minimum.errorMsg || `min ${validators.minimum.value}`,
-          value,
-        };
-        return;
-      }
+
+    const brokenBound = this.checkNumberBounds(numberValue, validators);
+    if (brokenBound !== undefined) {
+      fieldErrors[parent + name] = {
+        message: brokenBound,
+        value,
+      };
+      return;
     }
-    if (validators.maximum && validators.maximum.value !== undefined) {
-      if (validators.maximum.value < numberValue) {
-        fieldErrors[parent + name] = {
-          message: validators.maximum.errorMsg || `max ${validators.maximum.value}`,
-          value,
-        };
-        return;
-      }
-    }
+
     return numberValue;
   }
 
@@ -279,24 +292,16 @@ export class ValidationService {
     if (!validators) {
       return numberValue;
     }
-    if (validators.minimum && validators.minimum.value !== undefined) {
-      if (validators.minimum.value > numberValue) {
-        fieldErrors[parent + name] = {
-          message: validators.minimum.errorMsg || `min ${validators.minimum.value}`,
-          value,
-        };
-        return;
-      }
+
+    const brokenBound = this.checkNumberBounds(numberValue, validators);
+    if (brokenBound !== undefined) {
+      fieldErrors[parent + name] = {
+        message: brokenBound,
+        value,
+      };
+      return;
     }
-    if (validators.maximum && validators.maximum.value !== undefined) {
-      if (validators.maximum.value < numberValue) {
-        fieldErrors[parent + name] = {
-          message: validators.maximum.errorMsg || `max ${validators.maximum.value}`,
-          value,
-        };
-        return;
-      }
-    }
+
     return numberValue;
   }
 
@@ -1013,6 +1018,8 @@ export interface IntegerValidator {
   isLong?: { errorMsg?: string };
   minimum?: { value: number; errorMsg?: string };
   maximum?: { value: number; errorMsg?: string };
+  exclusiveMinimum?: { value: number; errorMsg?: string };
+  exclusiveMaximum?: { value: number; errorMsg?: string };
 }
 
 export interface FloatValidator {
@@ -1020,6 +1027,8 @@ export interface FloatValidator {
   isDouble?: { errorMsg?: string };
   minimum?: { value: number; errorMsg?: string };
   maximum?: { value: number; errorMsg?: string };
+  exclusiveMinimum?: { value: number; errorMsg?: string };
+  exclusiveMaximum?: { value: number; errorMsg?: string };
 }
 
 export interface DateValidator {

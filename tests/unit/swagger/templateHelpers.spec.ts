@@ -449,6 +449,43 @@ describe('ValidationService', () => {
     });
   });
 
+  describe('Exclusive bounds validate', () => {
+    const service = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true });
+
+    it('rejects a value that equals an exclusive bound', () => {
+      for (const [validators, value, message] of [
+        [{ exclusiveMinimum: { value: 5 } }, '5', 'exclusiveMin 5'],
+        [{ exclusiveMaximum: { value: 10 } }, '10', 'exclusiveMax 10'],
+      ] as const) {
+        const intError: FieldErrors = {};
+        expect(service.validateInt('name', value, intError, true, validators)).to.equal(undefined);
+        expect(intError.name.message).to.equal(message);
+
+        const floatError: FieldErrors = {};
+        expect(service.validateFloat('name', value, floatError, true, validators)).to.equal(undefined);
+        expect(floatError.name.message).to.equal(message);
+      }
+    });
+
+    it('accepts a value just past an exclusive bound', () => {
+      expect(service.validateInt('name', '6', {}, true, { exclusiveMinimum: { value: 5 } })).to.equal(6);
+      expect(service.validateInt('name', '9', {}, true, { exclusiveMaximum: { value: 10 } })).to.equal(9);
+      expect(service.validateFloat('name', '5.1', {}, true, { exclusiveMinimum: { value: 5 } })).to.equal(5.1);
+      expect(service.validateFloat('name', '9.9', {}, true, { exclusiveMaximum: { value: 10 } })).to.equal(9.9);
+    });
+
+    it('accepts a value that equals an inclusive bound', () => {
+      expect(service.validateInt('name', '5', {}, true, { minimum: { value: 5 } })).to.equal(5);
+      expect(service.validateFloat('name', '10', {}, true, { maximum: { value: 10 } })).to.equal(10);
+    });
+
+    it('uses the annotation error message when there is one', () => {
+      const error: FieldErrors = {};
+      service.validateFloat('name', '5', error, true, { exclusiveMinimum: { value: 5, errorMsg: 'must be over five' } });
+      expect(error.name.message).to.equal('must be over five');
+    });
+  });
+
   describe('Float validate', () => {
     it('should float value', () => {
       const value = '10';

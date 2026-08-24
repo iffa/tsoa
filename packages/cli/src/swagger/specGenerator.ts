@@ -1,12 +1,56 @@
 import { ExtendedSpecConfig } from '../cli';
 import { Tsoa, assertNever, Swagger } from '@tsoa/runtime';
 import * as handlebars from 'handlebars';
+import { GenerateMetadataError } from '../metadataGeneration/exceptions';
+import { shouldIncludeValidatorInSchema } from '../utils/validatorUtils';
+
+/** The schema keywords a validator can contribute, and nothing else. */
+export type ValidatorSchema = Partial<Pick<Swagger.BaseSchema, Tsoa.SchemaValidatorKey>>;
 
 export abstract class SpecGenerator {
   constructor(
     protected readonly metadata: Tsoa.Metadata,
     protected readonly config: ExtendedSpecConfig,
   ) {}
+
+  /**
+   * The schema keywords a set of validators contributes. Up to OpenAPI 3.0 an exclusive
+   * bound is a boolean modifier on `minimum`/`maximum`, so `@exclusiveMinimum 3` becomes
+   * `minimum: 3, exclusiveMinimum: true` and cannot be combined with `@minimum`. OpenAPI 3.1
+   * carries the bound as a number of its own; SpecGenerator31 overrides this.
+   */
+  protected buildValidatorSchema(validators: Tsoa.Validators, name: string): ValidatorSchema {
+    const exclusiveBounds = [
+      { exclusive: 'exclusiveMinimum', inclusive: 'minimum' },
+      { exclusive: 'exclusiveMaximum', inclusive: 'maximum' },
+    ] as const;
+
+    for (const bound of exclusiveBounds) {
+      if (validators[bound.exclusive] !== undefined && validators[bound.inclusive] !== undefined) {
+        throw new GenerateMetadataError(
+          `'${name}' uses both @${bound.inclusive} and @${bound.exclusive}, which ${this.specVersionName} cannot express because @${bound.exclusive} is a modifier on ${bound.inclusive}. Use one of them, or target OpenAPI 3.1.`,
+        );
+      }
+    }
+
+    const schema: Record<string, unknown> = {};
+
+    for (const key of Object.keys(validators).filter(shouldIncludeValidatorInSchema)) {
+      const bound = exclusiveBounds.find(candidate => candidate.exclusive === key);
+      if (bound) {
+        schema[bound.inclusive] = validators[key]!.value;
+        schema[key] = true;
+      } else {
+        schema[key] = validators[key]!.value;
+      }
+    }
+
+    // A validator's value is unknown by construction; the schema keys it fills are the ones
+    // shouldIncludeValidatorInSchema admits, all of which BaseSchema declares.
+    return schema as ValidatorSchema;
+  }
+
+  protected abstract get specVersionName(): string;
 
   protected buildAdditionalProperties(type: Tsoa.Type) {
     return this.getSwaggerType(type);

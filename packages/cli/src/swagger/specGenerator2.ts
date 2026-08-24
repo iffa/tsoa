@@ -8,7 +8,6 @@ import { isVoidType } from '../utils/isVoidType';
 import { convertColonPathParams, normalisePath } from '../utils/pathUtils';
 import { DEFAULT_REQUEST_MEDIA_TYPE, DEFAULT_RESPONSE_MEDIA_TYPE, getValue } from '../utils/swaggerUtils';
 import { UnspecifiedObject } from '../utils/unspecifiedObject';
-import { shouldIncludeValidatorInSchema } from '../utils/validatorUtils';
 
 export class SpecGenerator2 extends SpecGenerator {
   constructor(
@@ -16,6 +15,10 @@ export class SpecGenerator2 extends SpecGenerator {
     protected readonly config: ExtendedSpecConfig,
   ) {
     super(metadata, config);
+  }
+
+  protected get specVersionName(): string {
+    return 'Swagger 2.0';
   }
 
   public GetSpec() {
@@ -129,14 +132,7 @@ export class SpecGenerator2 extends SpecGenerator {
       } else if (referenceType.dataType === 'refAlias') {
         const swaggerType = this.getSwaggerType(referenceType.type);
         const format = referenceType.format as Swagger.DataFormat;
-        const validators = Object.keys(referenceType.validators)
-          .filter(shouldIncludeValidatorInSchema)
-          .reduce((acc, key) => {
-            return {
-              ...acc,
-              [key]: referenceType.validators[key]!.value,
-            };
-          }, {});
+        const validators = this.buildValidatorSchema(referenceType.validators, referenceType.refName);
 
         definitions[referenceType.refName] = {
           ...(swaggerType as Swagger.Schema2),
@@ -365,12 +361,7 @@ export class SpecGenerator2 extends SpecGenerator {
       return parameter;
     }
 
-    const validatorObjs: Partial<Record<Tsoa.SchemaValidatorKey, unknown>> = {};
-    Object.keys(source.validators)
-      .filter(shouldIncludeValidatorInSchema)
-      .forEach(key => {
-        validatorObjs[key] = source.validators[key]!.value;
-      });
+    const validatorObjs = this.buildValidatorSchema(source.validators, source.name);
 
     if (source.in === 'body' && source.type.dataType === 'array') {
       parameter.schema = {
@@ -414,11 +405,7 @@ export class SpecGenerator2 extends SpecGenerator {
       if (!swaggerType.$ref) {
         swaggerType.default = property.default;
 
-        Object.keys(property.validators)
-          .filter(shouldIncludeValidatorInSchema)
-          .forEach(key => {
-            swaggerType = { ...swaggerType, [key]: property.validators[key]!.value };
-          });
+        swaggerType = { ...swaggerType, ...this.buildValidatorSchema(property.validators, property.name) };
       }
       if (property.deprecated) {
         swaggerType['x-deprecated'] = true;

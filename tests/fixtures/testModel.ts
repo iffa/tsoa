@@ -1330,3 +1330,19 @@ export type PartialUnionModel = {
 } & {
   newFormat: Partial<({ prefix?: string } & ValueFormatModel) | ValueFormatModel>;
 };
+
+export class ExclusiveBoundsModel {
+  /**
+   * @exclusiveMinimum 5
+   */
+  public intAbove5!: number;
+  /**
+   * @exclusiveMaximum 10
+   */
+  public floatBelow10!: number;
+  /**
+   * @minimum 0
+   * @exclusiveMaximum 1
+   */
+  public ratio!: number;
+}
