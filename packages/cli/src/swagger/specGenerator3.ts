@@ -5,7 +5,6 @@ import { merge as deepMerge } from 'ts-deepmerge';
 import { ExtendedSpecConfig } from '../cli';
 import { isVoidType } from '../utils/isVoidType';
 import { UnspecifiedObject } from '../utils/unspecifiedObject';
-import { shouldIncludeValidatorInSchema } from '../utils/validatorUtils';
 import { convertColonPathParams, normalisePath } from './../utils/pathUtils';
 import { DEFAULT_REQUEST_MEDIA_TYPE, DEFAULT_RESPONSE_MEDIA_TYPE, getValue } from './../utils/swaggerUtils';
 import { SpecGenerator } from './specGenerator';
@@ -25,6 +24,10 @@ export class SpecGenerator3 extends SpecGenerator {
     protected readonly config: ExtendedSpecConfig,
   ) {
     super(metadata, config);
+  }
+
+  protected get specVersionName(): string {
+    return 'OpenAPI 3.0';
   }
 
   public GetSpec(): Swagger.Spec3 {
@@ -214,14 +217,7 @@ export class SpecGenerator3 extends SpecGenerator {
       } else if (referenceType.dataType === 'refAlias') {
         const swaggerType = this.getSwaggerType(referenceType.type);
         const format = referenceType.format as Swagger.DataFormat;
-        const validators = Object.keys(referenceType.validators)
-          .filter(shouldIncludeValidatorInSchema)
-          .reduce((acc, key) => {
-            return {
-              ...acc,
-              [key]: referenceType.validators[key]!.value,
-            };
-          }, {});
+        const validators = this.buildValidatorSchema(referenceType.validators, referenceType.refName);
 
         schema[referenceType.refName] = {
           ...(swaggerType as Swagger.Schema3),
@@ -448,14 +444,7 @@ export class SpecGenerator3 extends SpecGenerator {
   }
 
   protected buildMediaType(controllerName: string, method: Tsoa.Method, parameter: Tsoa.Parameter): Swagger.MediaType {
-    const validators = Object.keys(parameter.validators)
-      .filter(shouldIncludeValidatorInSchema)
-      .reduce((acc, key) => {
-        return {
-          ...acc,
-          [key]: parameter.validators[key]!.value,
-        };
-      }, {});
+    const validators = this.buildValidatorSchema(parameter.validators, parameter.name);
 
     const mediaType: Swagger.MediaType = {
       schema: {
@@ -517,12 +506,7 @@ export class SpecGenerator3 extends SpecGenerator {
       return Object.assign(parameter, this.buildExamples(source));
     }
 
-    const validatorObjs: { [key in Tsoa.SchemaValidatorKey]?: unknown } = {};
-    Object.keys(source.validators)
-      .filter(shouldIncludeValidatorInSchema)
-      .forEach(key => {
-        validatorObjs[key] = source.validators[key]!.value;
-      });
+    const validatorObjs = this.buildValidatorSchema(source.validators, source.name);
 
     if (source.type.dataType === 'any') {
       parameter.schema.type = 'string';
@@ -582,11 +566,7 @@ export class SpecGenerator3 extends SpecGenerator {
       if (!swaggerType.$ref) {
         swaggerType.default = property.default;
 
-        Object.keys(property.validators)
-          .filter(shouldIncludeValidatorInSchema)
-          .forEach(key => {
-            swaggerType = { ...swaggerType, [key]: property.validators[key]!.value };
-          });
+        swaggerType = { ...swaggerType, ...this.buildValidatorSchema(property.validators, property.name) };
       }
       if (property.deprecated) {
         swaggerType.deprecated = true;

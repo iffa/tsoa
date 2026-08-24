@@ -54,6 +54,8 @@ export const parameterValidatorTagNames = [
   'pattern',
   'minimum',
   'maximum',
+  'exclusiveMinimum',
+  'exclusiveMaximum',
   'minDate',
   'maxDate',
   'title',

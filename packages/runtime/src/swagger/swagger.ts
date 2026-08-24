@@ -339,9 +339,11 @@ export namespace Swagger {
     default?: string | boolean | number | unknown;
     multipleOf?: number;
     maximum?: number;
-    exclusiveMaximum?: number;
     minimum?: number;
-    exclusiveMinimum?: number;
+    // A boolean modifier on maximum/minimum up to OpenAPI 3.0, where Schema31 redeclares it
+    // as the bound itself.
+    exclusiveMaximum?: number | boolean;
+    exclusiveMinimum?: number | boolean;
     maxLength?: number;
     minLength?: number;
     pattern?: string;
@@ -368,8 +370,10 @@ export namespace Swagger {
     items?: BaseSchema;
   }
 
-  export interface Schema31 extends Omit<Schema3, 'items' | 'properties' | 'additionalProperties' | 'discriminator' | 'anyOf' | 'allOf'> {
+  export interface Schema31 extends Omit<Schema3, 'items' | 'properties' | 'additionalProperties' | 'discriminator' | 'anyOf' | 'allOf' | 'exclusiveMinimum' | 'exclusiveMaximum'> {
     examples?: unknown[];
+    exclusiveMinimum?: number;
+    exclusiveMaximum?: number;
 
     properties?: { [key: string]: Schema31 };
     additionalProperties?: boolean | Schema31;

@@ -303,6 +303,44 @@ describe('Express Server', () => {
       });
   });
 
+  describe('exclusive bounds', () => {
+    const path = basePath + '/Validate/exclusiveBounds';
+
+    it('accepts values inside the bounds', () => {
+      const body = { intAbove5: 6, floatBelow10: 9.5, ratio: 0 };
+
+      return verifyPostRequest(app, path, body, (_err: any, res: any) => {
+        expect(res.body).to.deep.equal(body);
+      });
+    });
+
+    it('applies to a query parameter too', () => {
+      return verifyGetRequest(
+        app,
+        basePath + '/Validate/parameter/exclusiveMinimum?value=5',
+        (err: any) => {
+          expect(JSON.parse(err.text).fields.value.message).to.equal('must be over 5');
+        },
+        400,
+      );
+    });
+
+    it('rejects a value that equals an exclusive bound', () => {
+      return verifyPostRequest(
+        app,
+        path,
+        { intAbove5: 5, floatBelow10: 10, ratio: 1 },
+        (err: any) => {
+          const body = JSON.parse(err.text);
+          expect(body.fields['body.intAbove5'].message).to.equal('exclusiveMin 5');
+          expect(body.fields['body.floatBelow10'].message).to.equal('exclusiveMax 10');
+          expect(body.fields['body.ratio'].message).to.equal('exclusiveMax 1');
+        },
+        400,
+      );
+    });
+  });
+
   it('should reject invalid additionalProperties', () => {
     const invalidValues = ['invalid', null, [], 1, { foo: null }, { foo: 1 }, { foo: [] }, { foo: {} }, { foo: { foo: 'bar' } }];
 
@@ -323,9 +361,13 @@ describe('Express Server', () => {
   });
 
   it('treats an absent body as undefined', () => {
-    return verifyRequest(app, (_err: any, res: any) => {
-      expect(res.body).to.deep.equal({ received: false });
-    }, request => request.post(basePath + '/PostTest/OptionalBody'));
+    return verifyRequest(
+      app,
+      (_err: any, res: any) => {
+        expect(res.body).to.deep.equal({ received: false });
+      },
+      request => request.post(basePath + '/PostTest/OptionalBody'),
+    );
   });
 
   it('keeps an empty array body', () => {

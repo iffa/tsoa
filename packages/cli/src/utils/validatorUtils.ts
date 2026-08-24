@@ -53,6 +53,8 @@ export function getParameterValidators(parameter: ts.ParameterDeclaration, param
           break;
         case 'minimum':
         case 'maximum':
+        case 'exclusiveMinimum':
+        case 'exclusiveMaximum':
         case 'minItems':
         case 'maxItems':
         case 'minLength':
@@ -154,6 +156,8 @@ export function getPropertyValidators(property: ts.Node): Tsoa.Validators | unde
           break;
         case 'minimum':
         case 'maximum':
+        case 'exclusiveMinimum':
+        case 'exclusiveMaximum':
         case 'minItems':
         case 'maxItems':
         case 'minLength':
