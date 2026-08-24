@@ -322,6 +322,18 @@ describe('Express Server', () => {
     });
   });
 
+  it('treats an absent body as undefined', () => {
+    return verifyRequest(app, (_err: any, res: any) => {
+      expect(res.body).to.deep.equal({ received: false });
+    }, request => request.post(basePath + '/PostTest/OptionalBody'));
+  });
+
+  it('keeps an empty array body', () => {
+    return verifyPostRequest(app, basePath + '/PostTest/ArrayBody', [], (_err: any, res: any) => {
+      expect(res.body).to.deep.equal({ length: 0 });
+    });
+  });
+
   it('removes additional properties', () => {
     const model = getFakeModel();
     const data = {
