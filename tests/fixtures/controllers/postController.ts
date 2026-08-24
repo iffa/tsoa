@@ -1,6 +1,6 @@
 import { Body, Deprecated, File, FormField, Patch, Post, Query, Route, UploadedFile, UploadedFiles } from '@tsoa/runtime';
 import { ModelService } from '../services/modelService';
-import { GenericRequest, TestClassModel, TestModel } from '../testModel';
+import { GenericRequest, PartialUnionModel, TestClassModel, TestModel } from '../testModel';
 
 @Route('PostTest')
 export class PostTestController {
@@ -31,6 +31,11 @@ export class PostTestController {
   @Post('ArrayBody')
   public async postArrayBody(@Body() body: string[]): Promise<{ length: number }> {
     return { length: body.length };
+  }
+
+  @Post('PartialUnionBody')
+  public async postPartialUnionBody(@Body() body: PartialUnionModel): Promise<PartialUnionModel> {
+    return body;
   }
 
   @Post('Object')

@@ -334,6 +334,15 @@ describe('Express Server', () => {
     });
   });
 
+  it('keeps properties only the wider member of a distributed Partial union declares', () => {
+    // https://github.com/lukeautry/tsoa/issues/1761
+    const body = { newFormat: { contentIfNotSet: '3', prefix: 'g' } };
+
+    return verifyPostRequest(app, basePath + '/PostTest/PartialUnionBody', body, (_err: any, res: any) => {
+      expect(res.body).to.deep.equal(body);
+    });
+  });
+
   it('removes additional properties', () => {
     const model = getFakeModel();
     const data = {
