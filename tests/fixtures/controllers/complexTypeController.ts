@@ -284,7 +284,7 @@ export class ComplexTypeController {
    * Test @Queries with nullable enum property
    */
   @Get('NullableEnumQueries')
-  public async getNullableEnumQueries(@Queries() query: NullableEnumQueriesParams): Promise<{ sport: SportCategory | null | undefined; name: string | undefined }> {
+  public async getNullableEnumQueries(@Queries() query: NullableEnumQueriesParams): Promise<NullableEnumQueriesParams> {
     return query;
   }
 }
