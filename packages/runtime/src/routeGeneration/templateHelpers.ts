@@ -536,6 +536,8 @@ export class ValidationService {
     }
 
     const subFieldErrors: FieldErrors[] = [];
+    const propertyCount = value !== null && typeof value === 'object' ? Object.keys(value).length : 0;
+    let best: { value: any; retained: number } | undefined;
 
     for (const subSchema of property.subSchemas) {
       const subFieldError: FieldErrors = {};
@@ -546,13 +548,40 @@ export class ValidationService {
       const cleanValue = this.ValidateParam({ ...subSchema, validators: { ...property.validators, ...subSchema.validators } }, validateableValue, name, subFieldError, isBodyParam, parent);
       subFieldErrors.push(subFieldError);
 
-      if (Object.keys(subFieldError).length === 0) {
+      if (Object.keys(subFieldError).length !== 0) {
+        continue;
+      }
+
+      // A member that keeps every property of the value is as good as it gets, so stop.
+      // Otherwise keep looking: `Partial<A | B>` distributes into members that TypeScript
+      // may order narrowest first, and matching that one silently drops the properties only
+      // the wider member declares.
+      const retained = this.countRetainedProperties(value, cleanValue, propertyCount);
+      if (retained === propertyCount) {
         return cleanValue;
       }
+      if (!best || retained > best.retained) {
+        best = { value: cleanValue, retained };
+      }
+    }
+
+    if (best) {
+      return best.value;
     }
 
     this.addSummarizedError(fieldErrors, parent + name, 'Could not match the union against any of the items. Issues: ', subFieldErrors, value);
     return;
+  }
+
+  /**
+   * How many of the value's own properties survived validation against a union member.
+   */
+  private countRetainedProperties(value: any, cleanValue: any, propertyCount: number): number {
+    if (propertyCount === 0 || cleanValue === null || typeof cleanValue !== 'object') {
+      return 0;
+    }
+
+    return Object.keys(value).reduce((retained, key) => (key in cleanValue ? retained + 1 : retained), 0);
   }
 
   public validateIntersection(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, subSchemas: TsoaRoute.PropertySchema[] | undefined, parent = ''): any {

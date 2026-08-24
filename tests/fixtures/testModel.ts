@@ -1317,3 +1317,16 @@ export enum EnumWithTitle {
   Value1 = 'value1',
   Value2 = 'value2',
 }
+
+type ValueFormatModel = { contentIfNotSet?: string };
+
+/**
+ * Partial over a union distributes, and TypeScript orders the narrower member first, so
+ * validating against the first matching member drops `prefix`. See
+ * https://github.com/lukeautry/tsoa/issues/1761
+ */
+export type PartialUnionModel = {
+  id?: string;
+} & {
+  newFormat: Partial<({ prefix?: string } & ValueFormatModel) | ValueFormatModel>;
+};
