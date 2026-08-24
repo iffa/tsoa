@@ -73,7 +73,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
           return this.validationService.ValidateParam(param, request.header(name), name, fieldErrors, false, undefined);
         case 'body': {
           const bodyFieldErrors: FieldErrors = {};
-          const bodyArgs = this.validationService.ValidateParam(param, request.body, name, bodyFieldErrors, true, undefined);
+          const bodyArgs = this.validationService.ValidateParam(param, this.normalizeRequestBody(request.body), name, bodyFieldErrors, true, undefined);
           Object.keys(bodyFieldErrors).forEach(key => {
             fieldErrors[key] = { message: bodyFieldErrors[key].message };
           });
@@ -113,6 +113,23 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
       throw new ValidateError(fieldErrors, '');
     }
     return values;
+  }
+
+  /**
+   * body-parser represents an absent request body as an empty object, so an optional
+   * `@Body()` would be validated against `{}` and fail on its required properties. A client
+   * that posts `{}` is indistinguishable from one that posts nothing, so both read as absent.
+   * Only a plain object counts - an empty array or buffer body is a body.
+   */
+  private normalizeRequestBody(body: unknown): unknown {
+    if (typeof body !== 'object' || body === null) {
+      return body;
+    }
+
+    const prototype = Object.getPrototypeOf(body);
+    const isPlainObject = prototype === Object.prototype || prototype === null;
+
+    return isPlainObject && Object.keys(body).length === 0 ? undefined : body;
   }
 
   protected returnHandler(params: ExpressReturnHandlerParameters) {
