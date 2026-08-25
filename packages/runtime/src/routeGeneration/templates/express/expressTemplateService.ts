@@ -91,7 +91,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
           return this.validationService.ValidateParam(param, request.header(name), name, fieldErrors, false, undefined);
         case 'body': {
           const bodyFieldErrors: FieldErrors = {};
-          const bodyArgs = this.validationService.ValidateParam(param, this.normalizeRequestBody(request.body), name, bodyFieldErrors, true, undefined);
+          const bodyArgs = this.validationService.ValidateParam(param, this.normalizeRequestBody(request), name, bodyFieldErrors, true, undefined);
           Object.keys(bodyFieldErrors).forEach(key => {
             fieldErrors[key] = { message: bodyFieldErrors[key].message };
           });
@@ -135,11 +135,14 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
 
   /**
    * body-parser represents an absent request body as an empty object, so an optional
-   * `@Body()` would be validated against `{}` and fail on its required properties. A client
-   * that posts `{}` is indistinguishable from one that posts nothing, so both read as absent.
-   * Only a plain object counts - an empty array or buffer body is a body.
+   * `@Body()` would be validated against `{}` and fail on its required properties. An empty
+   * plain object reads as absent only when the request carried no payload - a client that
+   * sends `{}` did send a body. Only a plain object counts - an empty array or buffer body
+   * is a body.
    */
-  private normalizeRequestBody(body: unknown): unknown {
+  private normalizeRequestBody(request: ExRequest): unknown {
+    const body = request.body;
+
     if (typeof body !== 'object' || body === null) {
       return body;
     }
@@ -147,7 +150,21 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
     const prototype = Object.getPrototypeOf(body);
     const isPlainObject = prototype === Object.prototype || prototype === null;
 
-    return isPlainObject && Object.keys(body).length === 0 ? undefined : body;
+    if (!isPlainObject || Object.keys(body).length > 0) {
+      return body;
+    }
+
+    return this.hasPayload(request) ? body : undefined;
+  }
+
+  private hasPayload(request: ExRequest): boolean {
+    if (request.headers['transfer-encoding'] !== undefined) {
+      return true;
+    }
+
+    const contentLength = request.headers['content-length'];
+
+    return contentLength !== undefined && contentLength !== '0';
   }
 
   protected returnHandler(params: ExpressReturnHandlerParameters) {
