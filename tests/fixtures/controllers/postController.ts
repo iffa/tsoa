@@ -28,6 +28,11 @@ export class PostTestController {
     return { received: body !== undefined, name: body?.name };
   }
 
+  @Post('AllOptionalPropsBody')
+  public async postAllOptionalPropsBody(@Body() body: { name?: string }): Promise<{ received: boolean; name?: string }> {
+    return { received: body !== undefined, name: body.name };
+  }
+
   @Post('ArrayBody')
   public async postArrayBody(@Body() body: string[]): Promise<{ length: number }> {
     return { length: body.length };

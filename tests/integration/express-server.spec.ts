@@ -370,6 +370,12 @@ describe('Express Server', () => {
     );
   });
 
+  it('keeps an explicitly sent empty object body', () => {
+    return verifyPostRequest(app, basePath + '/PostTest/AllOptionalPropsBody', {}, (_err: any, res: any) => {
+      expect(res.body).to.deep.equal({ received: true });
+    });
+  });
+
   it('keeps an empty array body', () => {
     return verifyPostRequest(app, basePath + '/PostTest/ArrayBody', [], (_err: any, res: any) => {
       expect(res.body).to.deep.equal({ length: 0 });
