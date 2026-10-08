@@ -64,6 +64,8 @@ module.exports = {
         '@typescript-eslint/require-await': 'off',
         '@typescript-eslint/no-unused-vars': 'off',
         '@typescript-eslint/no-floating-promises': 'off',
+        // Mocha callbacks and Supertest assertions support asynchronous functions.
+        '@typescript-eslint/no-misused-promises': 'off',
         // Crashes also fail the test
         'no-unsafe-optional-chaining': 'off',
       },

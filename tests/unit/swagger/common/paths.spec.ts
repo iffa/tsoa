@@ -73,6 +73,7 @@ describe('Colon path params conversion', () => {
     expect(convertColonPathParams(':pathParam')).to.equal('{pathParam}');
     expect(convertColonPathParams('/path1/:pathParam')).to.equal('/path1/{pathParam}');
     expect(convertColonPathParams('/path1/:pathParam/path2')).to.equal('/path1/{pathParam}/path2');
+    expect(convertColonPathParams('/path1/:first-:second')).to.equal('/path1/{first}-{second}');
   });
 
   it('should handle empty path', () => {

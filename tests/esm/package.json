@@ -6,8 +6,8 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "clean": "rimraf --glob dist fixtures/*/routes.ts fixtures/*/customRoutes.ts",
-    "pretest": "node --loader=ts-node/esm prepare.ts",
+    "clean": "rimraf --glob dist fixtures/*/routes.ts",
+    "pretest": "node --loader=ts-node/esm prepare.ts && ts-node --project ../tsconfig.json ../typecheck-generated.ts",
     "test": "cross-env NODE_ENV=tsoa_test mocha"
   },
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",

@@ -1,6 +1,5 @@
 import { ExtendedSpecConfig } from '@tsoa/cli/cli';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
 import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { SpecGenerator31 } from '@tsoa/cli/swagger/specGenerator31';
 import { expect } from 'chai';
@@ -13,23 +12,6 @@ describe('@exclusiveMinimum and @exclusiveMaximum', () => {
   const conflicting = () => new MetadataGenerator('./fixtures/controllers/invalidExclusiveBoundsController.ts').Generate();
 
   const propertiesOf = (schema: any) => schema.properties;
-
-  describe('Swagger 2.0', () => {
-    const properties = propertiesOf(new SpecGenerator2(metadata, options).GetSpec().definitions!.ExclusiveBoundsModel);
-
-    it('writes an exclusive bound as a boolean modifier on the inclusive one', () => {
-      expect(properties.intAbove5).to.deep.include({ minimum: 5, exclusiveMinimum: true });
-      expect(properties.floatBelow10).to.deep.include({ maximum: 10, exclusiveMaximum: true });
-    });
-
-    it('keeps an inclusive bound on the opposite side', () => {
-      expect(properties.ratio).to.deep.include({ minimum: 0, maximum: 1, exclusiveMaximum: true });
-    });
-
-    it('refuses an inclusive and an exclusive bound on the same side', () => {
-      expect(() => new SpecGenerator2(conflicting(), options).GetSpec()).to.throw(/uses both @minimum and @exclusiveMinimum/);
-    });
-  });
 
   describe('OpenAPI 3.0', () => {
     const properties = propertiesOf((new SpecGenerator3(metadata, options).GetSpec().components as any).schemas.ExclusiveBoundsModel);

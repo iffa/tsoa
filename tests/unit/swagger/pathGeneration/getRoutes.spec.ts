@@ -1,7 +1,6 @@
 import { expect } from 'chai';
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
 import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
 import { VerifyPathableNumberParameter, VerifyPathableParameter, VerifyPathableStringParameter } from '../../utilities/verifyParameter';
@@ -9,7 +8,7 @@ import { VerifyPath } from '../../utilities/verifyPath';
 
 describe('GET route generation', () => {
   const metadata = new MetadataGenerator('./fixtures/controllers/getController.ts').Generate();
-  const spec = new SpecGenerator2(metadata, getDefaultExtendedOptions()).GetSpec();
+  const spec = new SpecGenerator3(metadata, getDefaultExtendedOptions()).GetSpec();
   const baseRoute = '/GetTest';
 
   const getValidatedGetOperation = (actionRoute: string) => {
@@ -58,8 +57,8 @@ describe('GET route generation', () => {
       throw new Error('Should have one parameter.');
     }
 
-    expect(parameter.type).to.equal('string');
-    expect(parameter.format).to.equal('date-time');
+    expect(parameter.schema.type).to.equal('string');
+    expect(parameter.schema.format).to.equal('date-time');
   });
 
   it('should generate tags for tag decorated method', () => {
@@ -74,7 +73,7 @@ describe('GET route generation', () => {
 
   it('should generate a path for a GET route with no controller path argument', () => {
     const pathlessMetadata = new MetadataGenerator('./fixtures/controllers/pathlessGetController.ts').Generate();
-    const pathlessSpec = new SpecGenerator2(pathlessMetadata, getDefaultExtendedOptions()).GetSpec();
+    const pathlessSpec = new SpecGenerator3(pathlessMetadata, getDefaultExtendedOptions()).GetSpec();
     VerifyPath(pathlessSpec, '/Current', path => path.get, false);
   });
 
@@ -162,14 +161,7 @@ describe('GET route generation', () => {
       throw new Error('No success response.');
     }
 
-    if (!successResponse.schema) {
-      throw new Error('No response schema.');
-    }
-    if (!successResponse.schema.type) {
-      throw new Error('No response schema type.');
-    }
-
-    expect(successResponse.schema.type).to.equal('object');
+    expect(successResponse.content?.['application/json']?.schema?.anyOf).to.have.length(2);
   });
 
   it('should not generate content for 204 responses in v3', () => {
@@ -186,28 +178,28 @@ describe('GET route generation', () => {
   it('should reject complex types as arguments', () => {
     expect(() => {
       const invalidMetadata = new MetadataGenerator('./fixtures/controllers/invalidGetController.ts').Generate();
-      new SpecGenerator2(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
+      new SpecGenerator3(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
     }).to.throw("@Query('myModel') Can't support 'refObject' type. \n in 'InvalidGetTestController.getModelWithComplex'");
   });
 
   it('should reject Query and Queries decorators at the same time', () => {
     expect(() => {
       const invalidMetadata = new MetadataGenerator('./fixtures/controllers/invalidQueryController.ts').Generate();
-      new SpecGenerator2(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
+      new SpecGenerator3(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
     }).to.throw("Choose either during @Query or @Queries in 'InvalidQueryTestController.getQueryAndQueries' method.");
   });
 
   it('should reject multiple Queries decorators', () => {
     expect(() => {
       const invalidMetadata = new MetadataGenerator('./fixtures/controllers/invalidQueriesController.ts').Generate();
-      new SpecGenerator2(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
+      new SpecGenerator3(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
     }).to.throw("Only one queries parameter allowed in 'InvalidQueriesTestController.getWithMultipleQueriesParams' method.");
   });
 
   it('should reject nested Query object inside Queries decorator', () => {
     expect(() => {
       const invalidMetadata = new MetadataGenerator('./fixtures/controllers/invalidNestedQueriesController.ts').Generate();
-      new SpecGenerator2(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
+      new SpecGenerator3(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
     }).to.throw("@Queries('nestedQueries') nested property 'nestedObject' Can't support 'refObject' type. \n in 'InvalidNestedQueriesController.nestedQueriesMethod'");
   });
 
@@ -225,7 +217,7 @@ describe('GET route generation', () => {
   it('should reject unsupported indexed types', () => {
     expect(() => {
       const invalidMetadata = new MetadataGenerator('./fixtures/controllers/unsupportedIndexedTypeController.ts').Generate();
-      new SpecGenerator2(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
+      new SpecGenerator3(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
     }).to.throw(/^Unknown type: IndexedAccessType.*/);
   });
 
@@ -257,11 +249,11 @@ describe('GET route generation', () => {
 
   it('should generate example from example decorator', () => {
     const response = getValidatedSuccessResponse(baseRoute);
-    if (!response.examples) {
+    if (!response.content?.['application/json']?.examples) {
       throw new Error('No examples.');
     }
 
-    const jsonExample = response.examples['application/json'] as any;
+    const jsonExample = (response.content['application/json'].examples['Example 1'] as { value: any }).value;
     if (!jsonExample) {
       throw new Error('No json example.');
     }

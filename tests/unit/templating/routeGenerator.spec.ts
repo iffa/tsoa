@@ -96,7 +96,7 @@ describe('RouteGenerator', () => {
 
       const models = generator.buildContent('{{#each controllers}}{{modulePath}}{{/each}}');
 
-      expect(models).to.equal('./controllerWith.tsInPath');
+      expect(models).to.equal('./controllerWith.tsInPath.js');
     });
 
     it('adds js for routes if esm is true', () => {
@@ -151,33 +151,6 @@ describe('RouteGenerator', () => {
       const models = generator.buildContent('{{#each controllers}}{{modulePath}}{{/each}}');
 
       expect(models).to.equal('./controller.mjs');
-    });
-
-    it('adds cjs for routes if esm is true and source is cts', () => {
-      const generator = new DefaultRouteGenerator(
-        {
-          controllers: [
-            {
-              location: 'controller.cts',
-              methods: [],
-              name: '',
-              path: '',
-            },
-          ],
-          referenceTypeMap: {},
-        },
-        {
-          bodyCoercion: true,
-          entryFile: 'mockEntryFile',
-          routesDir: '.',
-          noImplicitAdditionalProperties: 'silently-remove-extras',
-          esm: true,
-        },
-      );
-
-      const models = generator.buildContent('{{#each controllers}}{{modulePath}}{{/each}}');
-
-      expect(models).to.equal('./controller.cjs');
     });
 
     it('uses ts for routes if esm is true and rewriteRelativeImportExtensions is true', () => {

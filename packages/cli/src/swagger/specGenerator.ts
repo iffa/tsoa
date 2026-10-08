@@ -151,9 +151,7 @@ export abstract class SpecGenerator {
 
   protected abstract getSwaggerTypeForIntersectionType(type: Tsoa.IntersectionType, title?: string): Swagger.BaseSchema;
 
-  protected abstract buildProperties(
-    properties: Tsoa.Property[],
-  ): { [propertyName: string]: Swagger.Schema2 } | { [propertyName: string]: Swagger.Schema3 } | { [propertyName: string]: Swagger.Schema31 };
+  protected abstract buildProperties(properties: Tsoa.Property[]): { [propertyName: string]: Swagger.Schema3 } | { [propertyName: string]: Swagger.Schema31 };
 
   public getSwaggerTypeForObjectLiteral(objectLiteral: Tsoa.NestedObjectLiteralType, title?: string): Swagger.BaseSchema {
     const properties = this.buildProperties(objectLiteral.properties);
@@ -258,7 +256,7 @@ export abstract class SpecGenerator {
     return typesUsedInEnum;
   }
 
-  protected abstract getSwaggerTypeForEnumType(enumType: Tsoa.EnumType, title?: string): Swagger.Schema2 | Swagger.Schema3;
+  protected abstract getSwaggerTypeForEnumType(enumType: Tsoa.EnumType, title?: string): Swagger.Schema3;
 
   protected hasUndefined(property: Tsoa.Property): boolean {
     return property.type.dataType === 'undefined' || (property.type.dataType === 'union' && property.type.types.some(type => type.dataType === 'undefined'));

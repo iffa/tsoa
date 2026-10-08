@@ -1,6 +1,6 @@
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
+import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
 import { VerifyPathableParameter } from '../../utilities/verifyParameter';
 import { VerifyPath } from '../../utilities/verifyPath';
@@ -8,7 +8,7 @@ import { Swagger } from '@tsoa/runtime';
 
 describe('DELETE route generation', () => {
   const metadata = new MetadataGenerator('./fixtures/controllers/deleteController.ts').Generate();
-  const spec = new SpecGenerator2(metadata, getDefaultExtendedOptions()).GetSpec();
+  const spec = new SpecGenerator3(metadata, getDefaultExtendedOptions()).GetSpec();
   const baseRoute = '/DeleteTest';
 
   it('should generate a path for a DELETE route with no path argument', () => {
@@ -42,7 +42,7 @@ describe('DELETE route generation', () => {
     return VerifyPath(spec, route, path => path.delete, isCollection, isNoContent);
   }
 
-  function getVerifiedParameters(actionRoute: string): Swagger.Parameter2[] {
+  function getVerifiedParameters(actionRoute: string): Array<Swagger.Parameter3 | Swagger.Parameter31> {
     const path = verifyPath(actionRoute, false, true);
     if (!path.delete) {
       throw new Error('No delete operation.');

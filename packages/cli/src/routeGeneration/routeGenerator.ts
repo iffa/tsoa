@@ -4,6 +4,7 @@ import { Tsoa, TsoaRoute, assertNever } from '@tsoa/runtime';
 import { isRefType } from '../utils/internalTypeGuards';
 import { convertBracesPathParams, normalisePath } from '../utils/pathUtils';
 import { fsExists, fsReadFile } from '../utils/fs';
+import { compareRoutePaths } from '../utils/routePaths';
 
 export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig> {
   constructor(
@@ -12,9 +13,9 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
   ) {}
 
   /**
-   * This is the entrypoint for a generator to create a custom set of routes
+   * Generate Express routes.
    */
-  public abstract GenerateCustomRoutes(): Promise<void>;
+  public abstract GenerateRoutes(): Promise<void>;
 
   public buildModels(): TsoaRoute.Models {
     const models = {} as TsoaRoute.Models;
@@ -73,17 +74,11 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
 
   protected buildContext() {
     const authenticationModule = this.options.authenticationModule ? this.getRelativeImportPath(this.options.authenticationModule) : undefined;
-    const iocModule = this.options.iocModule ? this.getRelativeImportPath(this.options.iocModule) : undefined;
-
-    // Left in for backwards compatibility, previously if we're working locally then tsoa runtime code wasn't an importable module but now it is.
-    const canImportByAlias = true;
-
     const normalisedBasePath = normalisePath(this.options.basePath as string, '/');
 
-    return {
+    const context = {
       authenticationModule,
       basePath: normalisedBasePath,
-      canImportByAlias,
       controllers: this.metadata.controllers.map(controller => {
         const normalisedControllerPath = this.pathTransformer(normalisePath(controller.path, '/'));
 
@@ -122,7 +117,6 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
         };
       }),
       environment: process.env,
-      iocModule,
       minimalSwaggerConfig: { noImplicitAdditionalProperties: this.options.noImplicitAdditionalProperties, bodyCoercion: this.options.bodyCoercion },
       models: this.buildModels(),
       useFileUploads: this.metadata.controllers.some(controller =>
@@ -142,10 +136,17 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
         limits: {
           fileSize: 8388608, // 8mb
         },
-        ...this.options.multerOpts,
-      } as Config['multerOpts'],
+      },
       useSecurity: this.metadata.controllers.some(controller => controller.methods.some(method => !!method.security.length)),
-      esm: this.options.esm,
+    };
+    return {
+      ...context,
+      routes: context.controllers
+        .flatMap(controller => controller.actions.map(action => ({ ...action, controllerName: controller.name })))
+        .sort(
+          (left, right) =>
+            compareRoutePaths(left.fullPath, right.fullPath) || (left.method === 'head' ? 0 : left.method === 'get' ? 1 : 2) - (right.method === 'head' ? 0 : right.method === 'get' ? 1 : 2),
+        ),
     };
   }
 
@@ -153,7 +154,7 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
     const currentExt = path.extname(fileLocation);
     let newExtension = this.options.rewriteRelativeImportExtensions ? currentExt : '';
 
-    if (this.options.esm && !this.options.rewriteRelativeImportExtensions) {
+    if (!this.options.rewriteRelativeImportExtensions) {
       switch (currentExt) {
         case '.ts':
         default:
@@ -163,8 +164,7 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
           newExtension = '.mjs';
           break;
         case '.cts':
-          newExtension = '.cjs';
-          break;
+          throw new Error(`CommonJS controller files are not supported: ${fileLocation}`);
       }
     }
 
@@ -245,7 +245,7 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
   }
 
   protected async shouldWriteFile(fileName: string, content: string) {
-    if (this.options.noWriteIfUnchanged) {
+    if (this.options.noWriteIfUnchanged !== false) {
       if (await fsExists(fileName)) {
         const existingContent = (await fsReadFile(fileName)).toString();
         return content !== existingContent;

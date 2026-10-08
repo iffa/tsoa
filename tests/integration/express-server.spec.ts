@@ -20,7 +20,7 @@ import {
   ValidateModel,
 } from '../fixtures/testModel';
 import { verifyRequest, verifyGetRequest, verifyPostRequest, verifyFileUploadRequest } from './utils';
-import * as request from 'supertest';
+import request from 'supertest';
 
 const basePath = '/v1';
 

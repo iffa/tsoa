@@ -2,44 +2,14 @@ import * as fs from 'fs';
 import * as handlebars from 'handlebars';
 import * as path from 'path';
 import { ExtendedRoutesConfig } from '../cli';
-import { Tsoa, TsoaRoute, assertNever } from '@tsoa/runtime';
+import { TsoaRoute, assertNever } from '@tsoa/runtime';
 import { fsReadFile, fsWriteFile } from '../utils/fs';
 import { convertBracesPathParams } from '../utils/pathUtils';
 import { AbstractRouteGenerator } from './routeGenerator';
 
 export class DefaultRouteGenerator extends AbstractRouteGenerator<ExtendedRoutesConfig> {
-  pathTransformerFn: (path: string) => string;
-  template: string;
-  constructor(metadata: Tsoa.Metadata, options: ExtendedRoutesConfig) {
-    super(metadata, options);
-    this.pathTransformerFn = convertBracesPathParams;
-
-    switch (options.middleware) {
-      case 'hapi':
-        this.template = path.join(__dirname, '..', 'routeGeneration/templates/hapi.hbs');
-        this.pathTransformerFn = (path: string) => path;
-        break;
-      case 'koa':
-        this.template = path.join(__dirname, '..', 'routeGeneration/templates/koa.hbs');
-        break;
-      case 'express':
-      default:
-        this.template = path.join(__dirname, '..', 'routeGeneration/templates/express.hbs');
-    }
-
-    if (options.middlewareTemplate) {
-      this.template = options.middlewareTemplate;
-    }
-  }
-
-  public async GenerateCustomRoutes() {
-    const data = await fsReadFile(path.join(this.template));
-    const file = data.toString();
-    return await this.GenerateRoutes(file);
-  }
-
-  public async GenerateRoutes(middlewareTemplate: string) {
-    const allowedExtensions = this.options.esm ? ['.ts', '.mts', '.cts'] : ['.ts'];
+  public async GenerateRoutes() {
+    const allowedExtensions = ['.ts', '.mts'];
 
     if (!fs.lstatSync(this.options.routesDir).isDirectory()) {
       throw new Error(`routesDir should be a directory`);
@@ -51,7 +21,8 @@ export class DefaultRouteGenerator extends AbstractRouteGenerator<ExtendedRoutes
     }
 
     const fileName = `${this.options.routesDir}/${this.options.routesFileName || 'routes.ts'}`;
-    const content = this.buildContent(middlewareTemplate);
+    const template = await fsReadFile(path.join(__dirname, 'templates/express.hbs'));
+    const content = this.buildContent(template.toString());
 
     if (await this.shouldWriteFile(fileName, content)) {
       await fsWriteFile(fileName, content);
@@ -59,7 +30,7 @@ export class DefaultRouteGenerator extends AbstractRouteGenerator<ExtendedRoutes
   }
 
   protected pathTransformer(path: string): string {
-    return this.pathTransformerFn(path);
+    return convertBracesPathParams(path);
   }
 
   public buildContent(middlewareTemplate: string) {

@@ -6,27 +6,12 @@ export namespace Swagger {
 
   export type Protocol = 'http' | 'https' | 'ws' | 'wss';
 
-  export type SupportedSpecMajorVersion = 2 | 3 | 3.1;
+  export type SupportedSpecMajorVersion = 3 | 3.1;
 
   export interface Spec {
     info: Info;
     tags?: Tag[];
     externalDocs?: ExternalDocs;
-  }
-
-  export interface Spec2 extends Spec {
-    swagger: '2.0';
-    host?: string;
-    basePath?: string;
-    schemes?: Protocol[];
-    consumes?: string[];
-    produces?: string[];
-    paths: { [name: string]: Path };
-    definitions?: { [name: string]: Schema2 };
-    parameters?: { [name: string]: Parameter2 };
-    responses?: { [name: string]: Response };
-    security?: Security[];
-    securityDefinitions?: { [name: string]: SecuritySchemes };
   }
 
   /**
@@ -80,7 +65,7 @@ export namespace Swagger {
     links?: { [name: string]: unknown };
     parameters?: { [name: string]: Parameter3 };
     requestBodies?: { [name: string]: unknown };
-    responses?: { [name: string]: Response };
+    responses?: { [name: string]: Response3 };
     schemas?: { [name: string]: Schema3 };
     securitySchemes?: { [name: string]: SecuritySchemes };
   }
@@ -139,56 +124,6 @@ export namespace Swagger {
     [ext: `x-${string}`]: unknown;
   } & Pick<BaseSchema, 'type' | 'items' | 'enum' | 'format' | 'minimum' | 'maximum' | 'minLength' | 'maxLength' | 'pattern'>;
 
-  export type BodyParameter = BaseParameter & {
-    in: 'body';
-  };
-
-  export type FormDataParameter = BaseParameter & {
-    in: 'formData';
-    type: DataType;
-    format?: DataFormat;
-    collectionFormat?: 'csv' | 'ssv' | 'tsv' | 'pipes' | 'multi';
-    default?: unknown;
-  };
-
-  type QueryParameter = BaseParameter & {
-    in: 'query';
-    type: DataType;
-    format?: DataFormat;
-    collectionFormat?: 'csv' | 'ssv' | 'tsv' | 'pipes' | 'multi';
-    default?: unknown;
-  };
-
-  type PathParameter = BaseParameter & {
-    in: 'path';
-    type: DataType;
-    format?: DataFormat;
-    default?: unknown;
-  };
-
-  type HeaderParameter = BaseParameter & {
-    in: 'header';
-    type: DataType;
-    format?: DataFormat;
-    default?: unknown;
-  };
-
-  type Swagger2BaseParameter = BaseParameter & {
-    schema: Schema2;
-  };
-
-  export type Swagger2BodyParameter = Swagger2BaseParameter & BodyParameter;
-  export type Swagger2FormDataParameter = Swagger2BaseParameter & FormDataParameter;
-  export type Swagger2QueryParameter = Swagger2BaseParameter & QueryParameter;
-  export type Swagger2PathParameter = Swagger2BaseParameter & PathParameter;
-  export type Swagger2HeaderParameter = Swagger2BaseParameter & HeaderParameter;
-
-  export type Parameter2 = Swagger2BodyParameter | Swagger2FormDataParameter | Swagger2QueryParameter | Swagger2PathParameter | Swagger2HeaderParameter;
-
-  export function isQueryParameter(parameter: unknown): parameter is Swagger2QueryParameter {
-    return typeof parameter === 'object' && parameter !== null && 'in' in parameter && parameter.in === 'query';
-  }
-
   export interface Parameter3 extends BaseParameter {
     in: 'query' | 'header' | 'path' | 'cookie';
     schema: Schema3;
@@ -203,18 +138,6 @@ export namespace Swagger {
     schema: Schema31;
   }
 
-  export interface Path {
-    $ref?: string;
-    get?: Operation;
-    put?: Operation;
-    post?: Operation;
-    delete?: Operation;
-    options?: Operation;
-    head?: Operation;
-    patch?: Operation;
-    parameters?: Parameter2[];
-  }
-
   export interface Path3 {
     $ref?: string;
     get?: Operation3;
@@ -225,23 +148,6 @@ export namespace Swagger {
     head?: Operation3;
     patch?: Operation3;
     parameters?: Parameter3[];
-  }
-
-  export interface Operation {
-    tags?: string[];
-    summary?: string;
-    description?: string;
-    externalDocs?: ExternalDocs;
-    operationId: string;
-    consumes?: string[];
-    produces?: string[];
-    parameters?: Parameter2[];
-    responses: { [name: string]: Response };
-    schemes?: Protocol[];
-    deprecated?: boolean;
-    security?: Security[];
-    // Used to apply extensions to paths
-    [key: string]: unknown;
   }
 
   export interface Operation3 {
@@ -295,13 +201,6 @@ export namespace Swagger {
     example?: unknown;
     examples?: { [name: string]: Example3 | string };
     encoding?: { [name: string]: unknown };
-  }
-
-  export interface Response {
-    description: string;
-    schema?: BaseSchema;
-    headers?: { [name: string]: Header };
-    examples?: { [responseMediaType: string]: { [exampleName: string]: Example3 | string } };
   }
 
   export interface Response3 {
@@ -402,13 +301,6 @@ export namespace Swagger {
     allOf?: BaseSchema[];
     deprecated?: boolean;
     properties?: { [propertyName: string]: Schema3 };
-  }
-
-  export interface Schema2 extends BaseSchema {
-    type?: DataType;
-    properties?: { [propertyName: string]: Schema2 };
-    ['x-nullable']?: boolean;
-    ['x-deprecated']?: boolean;
   }
 
   export interface Header {

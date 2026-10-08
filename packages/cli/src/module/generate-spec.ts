@@ -3,10 +3,9 @@ import * as YAML from 'yaml';
 import { ExtendedSpecConfig } from '../cli';
 import { MetadataGenerator } from '../metadataGeneration/metadataGenerator';
 import { Tsoa, Swagger, Config } from '@tsoa/runtime';
-import { SpecGenerator2 } from '../swagger/specGenerator2';
 import { SpecGenerator3 } from '../swagger/specGenerator3';
 import { SpecGenerator31 } from '../swagger/specGenerator31';
-import { fsMkDir, fsWriteFile } from '../utils/fs';
+import { fsMkDir, fsWriteFileIfChanged } from '../utils/fs';
 import { inlineUtilitySchemas } from '../swagger/inlineUtilitySchemas';
 
 export const getSwaggerOutputPath = (swaggerConfig: ExtendedSpecConfig) => {
@@ -28,25 +27,14 @@ export const generateSpec = async (
 ) => {
   if (!metadata) {
     const tsconfigPath = MetadataGenerator.resolveTsconfigPath(swaggerConfig.entryFile);
-    metadata = new MetadataGenerator(
-      swaggerConfig.entryFile,
-      compilerOptions,
-      ignorePaths,
-      swaggerConfig.controllerPathGlobs,
-      swaggerConfig.rootSecurity,
-      defaultNumberType,
-      undefined,
-      tsconfigPath,
-    ).Generate();
+    metadata = new MetadataGenerator(swaggerConfig.entryFile, compilerOptions, ignorePaths, swaggerConfig.controllerPathGlobs, swaggerConfig.rootSecurity, defaultNumberType, tsconfigPath).Generate();
   }
 
   let spec: Swagger.Spec;
 
   switch (swaggerConfig.specVersion) {
-    case 2:
-      spec = new SpecGenerator2(metadata, swaggerConfig).GetSpec();
-      break;
     case 3:
+    case undefined:
       spec = new SpecGenerator3(metadata, swaggerConfig).GetSpec();
       break;
     case 3.1:
@@ -64,7 +52,7 @@ export const generateSpec = async (
   }
 
   const outputPath = getSwaggerOutputPath(swaggerConfig);
-  await fsWriteFile(outputPath, data, { encoding: 'utf8' });
+  await fsWriteFileIfChanged(outputPath, data);
 
   return metadata;
 };

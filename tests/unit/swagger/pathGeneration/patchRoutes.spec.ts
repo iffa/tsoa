@@ -1,14 +1,15 @@
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
+import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
-import { VerifyBodyParameter, VerifyPathableParameter } from '../../utilities/verifyParameter';
+import { VerifyPathableParameter } from '../../utilities/verifyParameter';
+import { expect } from 'chai';
 import { defaultModelName, VerifyPath } from '../../utilities/verifyPath';
 import { Swagger } from '@tsoa/runtime';
 
 describe('PATCH route generation', () => {
   const metadata = new MetadataGenerator('./fixtures/controllers/patchController.ts').Generate();
-  const spec = new SpecGenerator2(metadata, getDefaultExtendedOptions()).GetSpec();
+  const spec = new SpecGenerator3(metadata, getDefaultExtendedOptions()).GetSpec();
   const baseRoute = '/PatchTest';
 
   it('should generate a path for a PATCH route with no path argument', () => {
@@ -25,7 +26,7 @@ describe('PATCH route generation', () => {
     verifyPath(actionRoute, true);
   });
 
-  const getValidatedParameters = (actionRoute: string): Swagger.Parameter2[] => {
+  const getValidatedParameters = (actionRoute: string): Array<Swagger.Parameter3 | Swagger.Parameter31> => {
     const path = verifyPath(actionRoute);
     if (!path.patch) {
       throw new Error('No patch operation.');
@@ -45,8 +46,7 @@ describe('PATCH route generation', () => {
   });
 
   it('should generate a parameter for body parameters', () => {
-    const parameters = getValidatedParameters(baseRoute);
-    VerifyBodyParameter(parameters, 'model', defaultModelName, 'body');
+    expect(spec.paths[baseRoute].patch!.requestBody!.content['application/json'].schema!.$ref).to.equal(defaultModelName);
   });
 
   function verifyPath(route: string, isCollection?: boolean) {

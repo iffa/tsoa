@@ -1,3 +1,5 @@
 node_modules
 dist
 .eslintrc.js
+tests/fixtures/**/routes.ts
+tests/esm/fixtures/**/routes.ts

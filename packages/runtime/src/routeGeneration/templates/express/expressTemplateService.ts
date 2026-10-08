@@ -208,3 +208,4 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
     }
   }
 }
+import type {} from 'multer';

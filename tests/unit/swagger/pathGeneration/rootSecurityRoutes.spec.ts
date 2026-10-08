@@ -1,21 +1,19 @@
 import { expect } from 'chai';
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
+import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
 import { VerifyPath } from '../../utilities/verifyPath';
 import type { Swagger } from '@tsoa/runtime';
 
 describe('Security route generation with root security', () => {
   describe('with @Security() on controller', () => {
-    const noSecurityControllerMetadata = new MetadataGenerator(
-      './fixtures/controllers/noSecurityController.ts',
-      undefined,
-      undefined,
-      undefined, [{
-        root_level_auth: []
-    }]).Generate();
-    const noSecuritySpec = new SpecGenerator2(noSecurityControllerMetadata, getDefaultExtendedOptions()).GetSpec();
+    const noSecurityControllerMetadata = new MetadataGenerator('./fixtures/controllers/noSecurityController.ts', undefined, undefined, undefined, [
+      {
+        root_level_auth: [],
+      },
+    ]).Generate();
+    const noSecuritySpec = new SpecGenerator3(noSecurityControllerMetadata, getDefaultExtendedOptions()).GetSpec();
 
     it('should use the method level security over root/controller security', () => {
       const path = verifyPath(noSecuritySpec, '/NoSecurityTest');
@@ -46,18 +44,15 @@ describe('Security route generation with root security', () => {
 
       expect(path.get.security).to.deep.equal([{ tsoa_auth: ['write:pets', 'read:pets'] }]);
     });
-
   });
 
   describe('with undefined controller level security', () => {
-    const plainControllerMetadata = new MetadataGenerator(
-      './fixtures/controllers/pathlessGetController.ts',
-      undefined,
-      undefined,
-      undefined, [{
-        root_level_auth: []
-    }]).Generate();
-    const plainSpec = new SpecGenerator2(plainControllerMetadata, getDefaultExtendedOptions()).GetSpec();
+    const plainControllerMetadata = new MetadataGenerator('./fixtures/controllers/pathlessGetController.ts', undefined, undefined, undefined, [
+      {
+        root_level_auth: [],
+      },
+    ]).Generate();
+    const plainSpec = new SpecGenerator3(plainControllerMetadata, getDefaultExtendedOptions()).GetSpec();
 
     it('should use root level security if no security defined on method', () => {
       const path = verifyPath(plainSpec, '/Current', 'TestModel');
@@ -66,22 +61,21 @@ describe('Security route generation with root security', () => {
         throw new Error('No get operation.');
       }
 
-      expect(path.get.security).to.deep.equal([{
-        root_level_auth: []
-      }]);
+      expect(path.get.security).to.deep.equal([
+        {
+          root_level_auth: [],
+        },
+      ]);
     });
-
   });
 
   describe('with @NoSecurity() on controller', () => {
-    const noSecurityControllerMetadata = new MetadataGenerator(
-      './fixtures/controllers/noSecurityOnController.ts',
-      undefined,
-      undefined,
-      undefined, [{
-        root_level_auth: []
-    }]).Generate();
-    const noSecurityOnControllerSpec = new SpecGenerator2(noSecurityControllerMetadata, getDefaultExtendedOptions()).GetSpec();
+    const noSecurityControllerMetadata = new MetadataGenerator('./fixtures/controllers/noSecurityOnController.ts', undefined, undefined, undefined, [
+      {
+        root_level_auth: [],
+      },
+    ]).Generate();
+    const noSecurityOnControllerSpec = new SpecGenerator3(noSecurityControllerMetadata, getDefaultExtendedOptions()).GetSpec();
 
     it('should use the method level security over root/controller security', () => {
       const path = verifyPath(noSecurityOnControllerSpec, '/NoSecurity');
@@ -112,10 +106,9 @@ describe('Security route generation with root security', () => {
 
       expect(path.get.security).to.deep.equal([]);
     });
+  });
 
-  })
-
-  function verifyPath(spec: Swagger.Spec2, route: string, model = 'UserResponseModel') {
-    return VerifyPath(spec, route, path => path.get, undefined, false, `#/definitions/${model}`);
+  function verifyPath(spec: Swagger.Spec3, route: string, model = 'UserResponseModel') {
+    return VerifyPath(spec, route, path => path.get, undefined, false, `#/components/schemas/${model}`);
   }
 });

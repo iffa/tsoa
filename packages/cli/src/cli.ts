@@ -7,7 +7,6 @@ import { MetadataGenerator } from './metadataGeneration/metadataGenerator';
 import { generateRoutes } from './module/generate-routes';
 import { generateSpec } from './module/generate-spec';
 import { fsExists, fsReadFile } from './utils/fs';
-import { AbstractRouteGenerator } from './routeGeneration/routeGenerator';
 import { extname, isAbsolute } from 'node:path';
 import type { CompilerOptions } from 'typescript';
 
@@ -32,10 +31,13 @@ const versionDefault = () => getPackageJsonValue('version', '1.0.0');
 const descriptionDefault = () => getPackageJsonValue('description', 'Build swagger-compliant REST APIs using TypeScript and Node');
 const licenseDefault = () => getPackageJsonValue('license', 'MIT');
 const determineNoImplicitAdditionalSetting = (noImplicitAdditionalProperties: Config['noImplicitAdditionalProperties']): Exclude<Config['noImplicitAdditionalProperties'], undefined> => {
+  if (noImplicitAdditionalProperties === undefined) {
+    return 'silently-remove-extras';
+  }
   if (noImplicitAdditionalProperties === 'silently-remove-extras' || noImplicitAdditionalProperties === 'throw-on-extras' || noImplicitAdditionalProperties === 'ignore') {
     return noImplicitAdditionalProperties;
   } else {
-    return 'ignore';
+    throw new Error(`Invalid noImplicitAdditionalProperties: ${String(noImplicitAdditionalProperties)}.`);
   }
 };
 const authorInformation: Promise<
@@ -60,7 +62,8 @@ const getConfig = async (configPath = 'tsoa.json'): Promise<Config> => {
       const configRaw = await fsReadFile(configFullPath);
       config = YAML.parse(configRaw.toString('utf8'));
     } else if (isJsExtension(ext)) {
-      config = await import(configFullPath);
+      const module = await import(configFullPath);
+      config = module.default || module;
     } else {
       const configRaw = await fsReadFile(configFullPath);
       config = JSON.parse(configRaw.toString('utf8'));
@@ -69,7 +72,7 @@ const getConfig = async (configPath = 'tsoa.json'): Promise<Config> => {
     if (!(err instanceof Error)) {
       console.error(err);
       throw Error(`Unhandled error encountered loading '${configPath}': ${String(err)}`);
-    } else if ('code' in err && err.code === 'MODULE_NOT_FOUND') {
+    } else if ('code' in err && (err.code === 'MODULE_NOT_FOUND' || err.code === 'ENOENT')) {
       throw Error(`No config file found at '${configPath}'`);
     } else if (err.name === 'SyntaxError') {
       console.error(err);
@@ -100,7 +103,7 @@ export interface ExtendedSpecConfig extends SpecConfig {
 
 export const validateSpecConfig = async (config: Config): Promise<ExtendedSpecConfig> => {
   if (!config.spec) {
-    throw new Error('Missing spec: configuration must contain spec. Spec used to be called swagger in previous versions of tsoa.');
+    throw new Error('Missing spec: configuration must contain spec.');
   }
   if (!config.spec.outputDirectory) {
     throw new Error('Missing outputDirectory: configuration must contain output directory.');
@@ -113,8 +116,8 @@ export const validateSpecConfig = async (config: Config): Promise<ExtendedSpecCo
   }
   config.spec.version = config.spec.version || (await versionDefault());
 
-  config.spec.specVersion = config.spec.specVersion || 2;
-  const supportedVersions = [2, 3, 3.1];
+  config.spec.specVersion = config.spec.specVersion ?? 3;
+  const supportedVersions = [3, 3.1];
   if (!supportedVersions.includes(config.spec.specVersion)) {
     throw new Error(`Unsupported Spec version: ${config.spec.specVersion}.`);
   }
@@ -177,19 +180,34 @@ export const validateSpecConfig = async (config: Config): Promise<ExtendedSpecCo
   };
 };
 
-type RouteGeneratorImpl = new (metadata: Tsoa.Metadata, options: ExtendedRoutesConfig) => AbstractRouteGenerator<any>;
-
 export interface ExtendedRoutesConfig extends RoutesConfig {
   entryFile: Config['entryFile'];
   noImplicitAdditionalProperties: Exclude<Config['noImplicitAdditionalProperties'], undefined>;
   bodyCoercion: Exclude<RoutesConfig['bodyCoercion'], undefined>;
   controllerPathGlobs?: Config['controllerPathGlobs'];
-  multerOpts?: Config['multerOpts'];
   rootSecurity?: Config['spec']['rootSecurity'];
-  routeGenerator?: string | RouteGeneratorImpl;
 }
 
-const validateRoutesConfig = async (config: Config): Promise<ExtendedRoutesConfig> => {
+export const validateRoutesConfig = async (config: Config): Promise<ExtendedRoutesConfig> => {
+  if (!config.routes) {
+    throw new Error('Missing routes: configuration must contain routes.');
+  }
+  for (const key of ['middlewareTemplate', 'routeGenerator', 'iocModule', 'multerOpts']) {
+    if (key in config.routes || key in config) {
+      throw new Error(`Unsupported configuration option '${key}'.`);
+    }
+  }
+  if (config.routes.middleware !== undefined && config.routes.middleware !== 'express') {
+    throw new Error('routes.middleware must be express.');
+  }
+  if (config.routes.esm !== undefined && config.routes.esm !== true) {
+    throw new Error('routes.esm must be true.');
+  }
+  for (const key of ['bodyCoercion', 'noWriteIfUnchanged', 'rewriteRelativeImportExtensions'] as const) {
+    if (config.routes[key] !== undefined && typeof config.routes[key] !== 'boolean') {
+      throw new Error(`routes.${key} must be a boolean.`);
+    }
+  }
   if (!config.entryFile && (!config.controllerPathGlobs || !config.controllerPathGlobs.length)) {
     throw new Error('Missing entryFile and controllerPathGlobs: Configuration must contain an entry point file or controller path globals.');
   }
@@ -204,10 +222,6 @@ const validateRoutesConfig = async (config: Config): Promise<ExtendedRoutesConfi
     throw new Error(`No authenticationModule file found at '${config.routes.authenticationModule}'`);
   }
 
-  if (config.routes.iocModule && !((await fsExists(config.routes.iocModule)) || (await fsExists(config.routes.iocModule + '.ts')))) {
-    throw new Error(`No iocModule file found at '${config.routes.iocModule}'`);
-  }
-
   const noImplicitAdditionalProperties = determineNoImplicitAdditionalSetting(config.noImplicitAdditionalProperties);
 
   const bodyCoercion = config.routes.bodyCoercion ?? false;
@@ -216,12 +230,14 @@ const validateRoutesConfig = async (config: Config): Promise<ExtendedRoutesConfi
 
   return {
     ...config.routes,
+    middleware: 'express',
+    esm: true,
+    noWriteIfUnchanged: config.routes.noWriteIfUnchanged ?? true,
     entryFile: config.entryFile,
     noImplicitAdditionalProperties,
     bodyCoercion,
     controllerPathGlobs: config.controllerPathGlobs,
-    multerOpts: config.multerOpts,
-    rootSecurity: config.spec.rootSecurity,
+    rootSecurity: config.spec?.rootSecurity,
   };
 };
 
@@ -388,16 +404,7 @@ export async function generateSpecAndRoutes(args: SwaggerArgs, metadata?: Tsoa.M
 
     if (!metadata) {
       const tsconfigPath = MetadataGenerator.resolveTsconfigPath(config.entryFile);
-      metadata = new MetadataGenerator(
-        config.entryFile,
-        compilerOptions,
-        config.ignore,
-        config.controllerPathGlobs,
-        config.spec.rootSecurity,
-        config.defaultNumberType,
-        config.routes.esm,
-        tsconfigPath,
-      ).Generate();
+      metadata = new MetadataGenerator(config.entryFile, compilerOptions, config.ignore, config.controllerPathGlobs, config.spec.rootSecurity, config.defaultNumberType, tsconfigPath).Generate();
     }
 
     await Promise.all([generateRoutes(routesConfig, compilerOptions, config.ignore, metadata), generateSpec(swaggerConfig, compilerOptions, config.ignore, metadata)]);
@@ -409,11 +416,3 @@ export async function generateSpecAndRoutes(args: SwaggerArgs, metadata?: Tsoa.M
     throw err;
   }
 }
-export type RouteGeneratorModule<Config extends ExtendedRoutesConfig> = {
-  default: new (
-    metadata: Tsoa.Metadata,
-    routesConfig: Config,
-  ) => {
-    GenerateCustomRoutes: () => Promise<void>;
-  };
-};

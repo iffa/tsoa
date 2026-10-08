@@ -149,20 +149,6 @@ function schemaReachesRef(models: TsoaRoute.Models, schema: TsoaRoute.PropertySc
   return children.some(child => schemaReachesRef(models, child, target, visited));
 }
 
-// for backwards compatibility with custom templates
-export function ValidateParam(
-  property: TsoaRoute.PropertySchema,
-  value: any,
-  generatedModels: TsoaRoute.Models,
-  name = '',
-  fieldErrors: FieldErrors,
-  isBodyParam: boolean,
-  parent = '',
-  config: AdditionalProps,
-) {
-  return new ValidationService(generatedModels, config).ValidateParam(property, value, name, fieldErrors, isBodyParam, parent);
-}
-
 export class ValidationService {
   private validationStack: Set<string> = new Set();
   private readonly unionDiscriminators = new WeakMap<TsoaRoute.PropertySchema, { name: string; members: Map<unknown, TsoaRoute.PropertySchema> } | null>();

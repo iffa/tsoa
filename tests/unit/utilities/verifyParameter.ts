@@ -1,51 +1,33 @@
 import { expect } from 'chai';
 import { Swagger } from '@tsoa/runtime';
 
-export function VerifyPathableParameter(params: Swagger.Parameter2[], paramValue: string, paramType: string, paramIn: string, formatType?: string) {
-  const parameter = verifyParameter(params, paramValue, paramIn);
-  expect(parameter.type).to.equal(paramType);
-  if (formatType) {
-    expect(parameter.format).to.equal(formatType);
-  }
+type Parameters = Array<Swagger.Parameter3 | Swagger.Parameter31>;
+
+function schemaOf(params: Parameters, name: string, location: string) {
+  const parameter = params.find(param => param.name === name);
+  expect(parameter, `Parameter '${name}' wasn't generated.`).to.exist;
+  expect(parameter!.in).to.equal(location);
+  return parameter!.schema;
 }
 
-export function VerifyPathableStringParameter(params: Swagger.Parameter2[], paramValue: string, paramType: string, paramIn: string, min?: number, max?: number, pattern?: string) {
-  const parameter = verifyParameter(params, paramValue, paramIn);
-  expect(parameter.type).to.equal(paramType);
-  if (min) {
-    expect(parameter.minLength).to.equal(min);
-  }
-  if (max) {
-    expect(parameter.maxLength).to.equal(max);
-  }
-  if (pattern) {
-    expect(parameter.pattern).to.equal(pattern);
-  }
+export function VerifyPathableParameter(params: Parameters, name: string, type: string, location: string, format?: string) {
+  const schema = schemaOf(params, name, location);
+  expect(schema.type).to.equal(type);
+  if (format) expect(schema.format).to.equal(format);
 }
 
-export function VerifyPathableNumberParameter(params: Swagger.Parameter2[], paramValue: string, paramType: string, paramIn: string, formatType?: string, min?: number, max?: number) {
-  const parameter = verifyParameter(params, paramValue, paramIn);
-  expect(parameter.type).to.equal(paramType);
-  if (formatType) {
-    expect(parameter.format).to.equal(formatType);
-  }
-  if (min) {
-    expect(parameter.minimum).to.equal(min);
-  }
-  if (max) {
-    expect(parameter.maximum).to.equal(max);
-  }
+export function VerifyPathableStringParameter(params: Parameters, name: string, type: string, location: string, min?: number, max?: number, pattern?: string) {
+  const schema = schemaOf(params, name, location);
+  expect(schema.type).to.equal(type);
+  if (min !== undefined) expect(schema.minLength).to.equal(min);
+  if (max !== undefined) expect(schema.maxLength).to.equal(max);
+  if (pattern) expect(schema.pattern).to.equal(pattern);
 }
 
-export function VerifyBodyParameter(params: Swagger.Parameter2[], paramValue: string, paramType: string, paramIn: string) {
-  const parameter = verifyParameter(params, paramValue, paramIn);
-  expect(parameter.schema.$ref).to.equal(paramType);
-}
-
-function verifyParameter(params: Swagger.Parameter2[], paramValue: string, paramIn: string) {
-  const parameter = params.filter(p => p.name === paramValue)[0];
-  expect(parameter, `Path parameter '${paramValue}' wasn't generated.`).to.exist;
-  expect(parameter.in).to.equal(paramIn);
-
-  return parameter;
+export function VerifyPathableNumberParameter(params: Parameters, name: string, type: string, location: string, format?: string, min?: number, max?: number) {
+  const schema = schemaOf(params, name, location);
+  expect(schema.type).to.equal(type);
+  if (format) expect(schema.format).to.equal(format);
+  if (min !== undefined) expect(schema.minimum).to.equal(min);
+  if (max !== undefined) expect(schema.maximum).to.equal(max);
 }

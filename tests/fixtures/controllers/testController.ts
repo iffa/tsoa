@@ -1,6 +1,6 @@
 import { Controller, Get, Route, SuccessResponse, Response } from '@tsoa/runtime';
 import { ErrorResponseModel, TestModel } from '../testModel';
-import { NonFactoryDecorator } from '../custom/non-factory-decorator';
+import { NonFactoryDecorator } from '../non-factory-decorator';
 import { ModelService } from '../services/modelService';
 
 @Route('Controller')
@@ -61,7 +61,7 @@ export class TestController extends Controller {
   public async getUnavailableForLegalReasonsError(): Promise<ErrorResponseModel> {
     throw {
       status: 451,
-      messgage: 'error'
+      messgage: 'error',
     };
   }
 }

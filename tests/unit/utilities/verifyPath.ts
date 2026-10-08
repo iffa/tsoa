@@ -1,12 +1,12 @@
 import { expect } from 'chai';
 import { Swagger } from '@tsoa/runtime';
 
-export const defaultModelName = '#/definitions/TestModel';
+export const defaultModelName = '#/components/schemas/TestModel';
 
 export function VerifyPath(
-  spec: Swagger.Spec2,
+  spec: Swagger.Spec3,
   route: string,
-  getOperation: (path: Swagger.Path) => Swagger.Operation | undefined,
+  getOperation: (path: Swagger.Path3 | Swagger.Path31) => Swagger.Operation3 | Swagger.Operation31 | undefined,
   isCollection?: boolean,
   isNoContent?: boolean,
   givenModelName?: string,
@@ -32,15 +32,16 @@ export function VerifyPath(
   const successResponse = operation.responses['200'];
   expect(successResponse, `200 response for ${route} route wasn't generated.`).to.exist;
 
-  if (!successResponse.schema) {
+  const schema = successResponse.content?.['application/json']?.schema;
+  if (!schema) {
     throw new Error(`Schema for 200 response ${route} route wasn't generated.`);
   }
 
   if (isCollection) {
-    expect(successResponse.schema.type).to.equal('array');
-    expect(successResponse.schema.items?.$ref).to.equal(modelName);
+    expect(schema.type).to.equal('array');
+    expect((schema.items as Swagger.Schema3)?.$ref).to.equal(modelName);
   } else {
-    expect(successResponse.schema.$ref).to.equal(modelName);
+    expect(schema.$ref).to.equal(modelName);
   }
 
   return path;

@@ -15,7 +15,6 @@ import { SpecGenerator } from './specGenerator';
  * Handle requestBodies of type other than json
  * Handle requestBodies as reusable objects
  * Handle headers, examples, responses, etc.
- * Cleaner interface between SpecGenerator2 and SpecGenerator3
  * Also accept OpenAPI 3.0.0 metadata, like components/securitySchemes instead of securityDefinitions
  */
 export class SpecGenerator3 extends SpecGenerator {

@@ -12,12 +12,12 @@ export function inlineUtilitySchemas<T extends Swagger.Spec>(spec: T, metadata: 
     return spec;
   }
 
-  const root = spec as T & { definitions?: Record<string, unknown>; components?: { schemas?: Record<string, unknown> } };
-  const schemas = root.definitions || root.components?.schemas;
+  const root = spec as T & { components?: { schemas?: Record<string, unknown> } };
+  const schemas = root.components?.schemas;
   if (!schemas) {
     return spec;
   }
-  const prefix = root.definitions ? '#/definitions/' : '#/components/schemas/';
+  const prefix = '#/components/schemas/';
   const resolved = new Map<string, Record<string, unknown>>();
   const resolving = new Set<string>();
 
@@ -71,7 +71,7 @@ export function inlineUtilitySchemas<T extends Swagger.Spec>(spec: T, metadata: 
   }
 
   const cleanSchemas = Object.fromEntries(Object.entries(schemas).filter(([name]) => !utilities.has(name)));
-  const cleanSpec = root.definitions ? { ...root, definitions: cleanSchemas } : { ...root, components: { ...root.components, schemas: cleanSchemas } };
+  const cleanSpec = { ...root, components: { ...root.components, schemas: cleanSchemas } };
   return transform(cleanSpec) as T;
 }
 

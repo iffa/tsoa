@@ -10,7 +10,7 @@ describe('Configuration', () => {
       const config: Partial<Config> = getDefaultOptions();
       delete config.spec;
       validateSpecConfig(config as Config).catch(err => {
-        expect(err.message).to.equal('Missing spec: configuration must contain spec. Spec used to be called swagger in previous versions of tsoa.');
+        expect(err.message).to.equal('Missing spec: configuration must contain spec.');
         done();
       });
     });
@@ -62,10 +62,10 @@ describe('Configuration', () => {
       });
     });
 
-    it('should set the default Spec version 2 when not specified', done => {
+    it('should set the default Spec version 3 when not specified', done => {
       const config: Config = getDefaultOptions('some/output/directory', 'tsoa.json');
       validateSpecConfig(config).then((configResult: ExtendedSpecConfig) => {
-        expect(configResult.specVersion).to.equal(2);
+        expect(configResult.specVersion).to.equal(3);
         done();
       });
     });

@@ -11,7 +11,6 @@ export * from './decorators/extension';
 export * from './decorators/middlewares';
 export * from './interfaces/controller';
 export * from './interfaces/response';
-export * from './interfaces/iocModule';
 export * from './interfaces/file';
 export * from './decorators/response';
 export * from './metadataGeneration/tsoa';

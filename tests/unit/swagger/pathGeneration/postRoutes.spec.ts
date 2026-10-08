@@ -1,18 +1,18 @@
 import * as chai from 'chai';
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
+import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
-import { VerifyBodyParameter, VerifyPathableParameter } from '../../utilities/verifyParameter';
+import { VerifyPathableParameter } from '../../utilities/verifyParameter';
 import { defaultModelName, VerifyPath } from '../../utilities/verifyPath';
 import { Swagger } from '@tsoa/runtime';
 
 describe('POST route generation', () => {
   const metadata = new MetadataGenerator('./fixtures/controllers/postController.ts').Generate();
-  const spec = new SpecGenerator2(metadata, getDefaultExtendedOptions()).GetSpec();
+  const spec = new SpecGenerator3(metadata, getDefaultExtendedOptions()).GetSpec();
   const baseRoute = '/PostTest';
 
-  const getValidatedParameters = (actionRoute: string): Swagger.Parameter2[] => {
+  const getValidatedParameters = (actionRoute: string): Array<Swagger.Parameter3 | Swagger.Parameter31> => {
     const path = verifyPath(actionRoute);
     if (!path.post) {
       throw new Error('No patch operation.');
@@ -45,22 +45,21 @@ describe('POST route generation', () => {
   });
 
   it('should generate a parameter for body parameters', () => {
-    const parameters = getValidatedParameters(baseRoute);
-    VerifyBodyParameter(parameters, 'model', defaultModelName, 'body');
+    chai.expect(spec.paths[baseRoute].post!.requestBody!.content['application/json'].schema!.$ref).to.equal(defaultModelName);
   });
 
   it('should reject multiple body parameters', () => {
     chai
       .expect(() => {
         const invalidMetadata = new MetadataGenerator('./fixtures/controllers/invalidPostController.ts').Generate();
-        new SpecGenerator2(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
+        new SpecGenerator3(invalidMetadata, getDefaultExtendedOptions()).GetSpec();
       })
       .to.throw("Only one body parameter allowed in 'InvalidPostTestController.postWithMultipleBodyParams' method.");
   });
 
   it('should be able to parse body and query parameters together', () => {
     const parameters = getValidatedParameters(`${baseRoute}/WithBodyAndQueryParams`);
-    VerifyBodyParameter(parameters, 'model', defaultModelName, 'body');
+    chai.expect(spec.paths[`${baseRoute}/WithBodyAndQueryParams`].post!.requestBody!.content['application/json'].schema!.$ref).to.equal(defaultModelName);
     VerifyPathableParameter(parameters, 'query', 'string', 'query');
   });
 

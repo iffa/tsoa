@@ -1,5 +1,4 @@
 import { Swagger } from './swagger/swagger';
-import { Options as MulterOpts } from 'multer';
 
 export interface Config {
   /**
@@ -40,32 +39,12 @@ export interface Config {
    */
   compilerOptions?: Record<string, unknown>;
 
-  /**
-   * Multer's options to generate multer's middleware.
-   * It doesn't support storage option
-   *
-   * @example {
-   *   "dest": "/tmp"
-   * } Allow multer to write to file instead of using Memory's buffer
-   * @deprecated
-   *  since v6.4.0 instroduces RegisterRoutes can pass multerOptions,
-   *  we will quickly remove this options soon at future version.
-   *  (https://github.com/lukeautry/tsoa/issues/1587#issuecomment-2391291433)
-   *  (https://github.com/lukeautry/tsoa/pull/1638)
-   */
-  multerOpts?: MulterOpts;
-
   /*
    * OpenAPI number type to be used for TypeScript's 'number', when there isn't a type annotation
    * @default double
    */
   defaultNumberType?: 'double' | 'float' | 'integer' | 'long';
 }
-
-/**
- * these options will be removed in a future version since we would prefer consumers to explicitly state their preference that the tsoa validation throws or removes additional properties
- */
-export type DeprecatedOptionForAdditionalPropertiesHandling = true | false;
 
 export interface SpecConfig {
   /**
@@ -99,9 +78,8 @@ export interface SpecConfig {
   version?: string;
 
   /**
-   * Major OpenAPI version to generate; defaults to version 2 when not specified
+   * OpenAPI version to generate; defaults to 3.0.
    * Possible values:
-   *  - 2: generates OpenAPI version 2.
    *  - 3: generates OpenAPI version 3.
    *  - 3.1: generates OpenAPI version 3.1.
    */
@@ -244,7 +222,7 @@ export interface RoutesConfig {
   routesFileName?: string;
 
   /**
-   * Avoid writing the generated route file if the existing file is identical (useful to optimize watch processes); false by default
+   * Avoid writing identical generated routes; true by default.
    */
   noWriteIfUnchanged?: boolean;
 
@@ -256,29 +234,19 @@ export interface RoutesConfig {
   /**
    * Middleware provider.
    */
-  middleware?: 'express' | 'hapi' | 'koa';
+  middleware?: 'express';
 
   /**
-   * Override the Middleware template
-   */
-  middlewareTemplate?: string;
-
-  /**
-   * IOC module; e.g. './inversify/ioc' where IOC container named `iocContainer` is defined (https://github.com/inversify/InversifyJS)
-   */
-  iocModule?: string;
-
-  /**
-   * Authentication Module for express, hapi and koa
+   * Express authentication module.
    */
   authenticationModule?: string;
 
   /**
    * When enabled, the imports in the routes files will have a `.js` extention to support esm.
    *
-   * @default false
+   * @default true
    */
-  esm?: boolean;
+  esm?: true;
 
   /*
    * Whether to implicitly coerce body parameters into an accepted type.

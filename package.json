@@ -11,9 +11,7 @@
     "node.js",
     "codegen",
     "generation",
-    "express",
-    "hapi.js",
-    "koa"
+    "express"
   ],
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",

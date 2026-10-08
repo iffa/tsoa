@@ -14,6 +14,7 @@
     "strict": true,
     "noImplicitAny": false,
     "skipLibCheck": true,
+    "esModuleInterop": true,
     "paths": {
       "@tsoa/cli/*": ["../packages/cli/src/*"],
       "@tsoa/runtime/*": ["../packages/runtime/src/*"]
@@ -22,6 +23,7 @@
   "references": [{ "path": "../packages/runtime" }, { "path": "../packages/cli" }],
   "exclude": ["esm", "fixtures/**/routes.ts"],
   "ts-node": {
-    "transpileOnly": true
+    "transpileOnly": true,
+    "experimentalResolver": true
   }
 }

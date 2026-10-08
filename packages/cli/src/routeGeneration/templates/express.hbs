@@ -5,24 +5,14 @@
 import type { TsoaRoute } from '@tsoa/runtime';
 import {  fetchMiddlewares, ExpressTemplateService } from '@tsoa/runtime';
 {{#each controllers}}
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { {{name}} } from '{{modulePath}}';
 {{/each}}
 {{#if authenticationModule}}
 import { expressAuthentication } from '{{authenticationModule}}';
-// @ts-ignore - no great way to install types from subpackage
-{{/if}}
-{{#if iocModule}}
-import { iocContainer } from '{{iocModule}}';
-import type { IocContainer, IocContainerFactory } from '@tsoa/runtime';
 {{/if}}
 import type { Request as ExRequest, Response as ExResponse, RequestHandler, Router } from 'express';
 {{#if useFileUploads}}
-{{#if esm}}
 import multer from 'multer';
-{{else}}
-const multer = require('multer');
-{{/if}}
 
 {{/if}}
 
@@ -30,8 +20,6 @@ const multer = require('multer');
 const expressAuthenticationRecasted = expressAuthentication as (req: ExRequest, securityName: string, scopes?: string[], res?: ExResponse) => Promise<any>;
 {{/if}}
 
-
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
 const models: TsoaRoute.Models = {
     {{#each models}}
@@ -54,12 +42,10 @@ const models: TsoaRoute.Models = {
         "type": {{{json type}}},
         {{/if}}
     },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     {{/each}}
 };
 const templateService = new ExpressTemplateService(models, {{{ json minimalSwaggerConfig}}});
 
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
 
 
@@ -80,9 +66,8 @@ export function RegisterRoutes(app: Router) {
     {{/if}}
 
     
-    {{#each controllers}}
-    {{#each actions}}
-        const args{{../name}}_{{name}}: Record<string, TsoaRoute.ParameterSchema> = {
+    {{#each routes}}
+        const args{{controllerName}}_{{name}}: Record<string, TsoaRoute.ParameterSchema> = {
             {{#each parameters}}
                 {{@key}}: {{{json this}}},
             {{/each}}
@@ -103,27 +88,17 @@ export function RegisterRoutes(app: Router) {
                 {{/each}}
             ]),
             {{/if}}
-            ...(fetchMiddlewares<RequestHandler>({{../name}})),
-            ...(fetchMiddlewares<RequestHandler>({{../name}}.prototype.{{name}})),
+            ...(fetchMiddlewares<RequestHandler>({{controllerName}})),
+            ...(fetchMiddlewares<RequestHandler>({{controllerName}}.prototype.{{name}})),
 
-            async function {{../name}}_{{name}}(request: ExRequest, response: ExResponse, next: any) {
+            async function {{controllerName}}_{{name}}(request: ExRequest, response: ExResponse, next: any) {
 
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
             let validatedArgs: any[] = [];
             try {
-                validatedArgs = templateService.getValidatedArgs({ args: args{{../name}}_{{name}}, request, response });
+                validatedArgs = templateService.getValidatedArgs({ args: args{{controllerName}}_{{name}}, request, response });
 
-              {{#if ../../iocModule}}
-                const container: IocContainer = typeof iocContainer === 'function' ? (iocContainer as IocContainerFactory)(request) : iocContainer;
-
-                const controller: any = await container.get<{{../name}}>({{../name}});
-                if (typeof controller['setStatus'] === 'function') {
-                controller.setStatus(undefined);
-                }
-              {{else}}
-                const controller = new {{../name}}();
-              {{/if}}
+                const controller = new {{controllerName}}();
 
               await templateService.apiHandler({
                 methodName: '{{name}}',
@@ -137,20 +112,15 @@ export function RegisterRoutes(app: Router) {
                 return next(err);
             }
         });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    {{/each}}
     {{/each}}
 
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
     {{#if useSecurity}}
 
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
     function authenticateMiddleware(security: TsoaRoute.Security[] = []) {
         return async function runAuthenticationMiddleware(request: any, response: any, next: any) {
 
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
             // keep track of failed auth attempts so we can hand back the most
             // recent one.  This behavior was previously existing so preserving it
@@ -173,7 +143,6 @@ export function RegisterRoutes(app: Router) {
                         );
                     }
 
-                    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
                     secMethodOrPromises.push(Promise.all(secMethodAndPromises)
                         .then(users => { return users[0]; }));
@@ -187,7 +156,6 @@ export function RegisterRoutes(app: Router) {
                 }
             }
 
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
             try {
                 request['user'] = await Promise.any(secMethodOrPromises);
@@ -211,12 +179,8 @@ export function RegisterRoutes(app: Router) {
                 next(error);
             }
 
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         }
     }
     {{/if}}
 
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 }
-
-// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa

@@ -18,6 +18,7 @@ export namespace Tsoa {
   }
 
   export interface Method {
+    sourceLine?: number;
     extensions: Extension[];
     deprecated?: boolean;
     description?: string;

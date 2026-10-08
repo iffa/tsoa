@@ -57,6 +57,7 @@ export class MethodGenerator {
     responses.push(...additionalResponses);
 
     return {
+      sourceLine: this.node.getSourceFile().getLineAndCharacterOfPosition(this.node.getStart()).line + 1,
       extensions: this.getExtensions(),
       deprecated: this.getIsDeprecated(),
       description: getJSDocDescription(this.node),

@@ -1,13 +1,13 @@
 import { expect } from 'chai';
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
+import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
 import { VerifyPath } from '../../utilities/verifyPath';
 
 describe('NoSecurity route generation', () => {
   const metadata = new MetadataGenerator('./fixtures/controllers/noSecurityController.ts').Generate();
-  const spec = new SpecGenerator2(metadata, getDefaultExtendedOptions()).GetSpec();
+  const spec = new SpecGenerator3(metadata, getDefaultExtendedOptions()).GetSpec();
 
   it('should generate a route with a named security', () => {
     const path = verifyPath('/NoSecurityTest');
@@ -40,6 +40,6 @@ describe('NoSecurity route generation', () => {
   });
 
   function verifyPath(route: string, isCollection?: boolean) {
-    return VerifyPath(spec, route, path => path.get, isCollection, false, '#/definitions/UserResponseModel');
+    return VerifyPath(spec, route, path => path.get, isCollection, false, '#/components/schemas/UserResponseModel');
   }
 });

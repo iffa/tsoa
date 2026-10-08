@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
 import { Tsoa } from '@tsoa/runtime';
-import { SpecGenerator2 } from '@tsoa/cli/swagger/specGenerator2';
+import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
 
 describe('Metadata generation', () => {
@@ -795,7 +795,7 @@ describe('Metadata generation', () => {
     });
 
     it('Should inline enums for TS Enums in path, query and header when using Swagger', () => {
-      const spec = new SpecGenerator2(parameterMetadata, getDefaultExtendedOptions()).GetSpec();
+      const spec = new SpecGenerator3(parameterMetadata, getDefaultExtendedOptions()).GetSpec();
       const method = spec.paths['/ParameterTest/Path/{firstname}/{last_name}/{age}/{weight}/{human}/{gender}'].get;
 
       if (!method || !method.parameters) {
@@ -812,7 +812,8 @@ describe('Metadata generation', () => {
       expect(genderParam.name).to.equal('gender');
       expect(genderParam.description).to.equal('Gender description');
       expect(genderParam.required).to.be.true;
-      expect(genderParam.enum).to.deep.equal(['MALE', 'FEMALE']);
+      expect(genderParam.schema.$ref).to.equal('#/components/schemas/Gender');
+      expect(spec.components.schemas!.Gender.enum).to.deep.equal(['MALE', 'FEMALE']);
     });
 
     it('should mark deprecated params as deprecated', () => {

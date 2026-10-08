@@ -16,9 +16,7 @@
     "node.js",
     "codegen",
     "generation",
-    "express",
-    "hapi.js",
-    "koa"
+    "express"
   ],
   "scripts": {
     "build": "yarn clean && yarn tsc && yarn copy-templates",
