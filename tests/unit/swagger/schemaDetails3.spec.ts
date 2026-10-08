@@ -1769,6 +1769,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
             expect(propertySchema.$ref).to.eq('#/components/schemas/Record_string.never_');
             const schema = getComponentSchema('Record_string.never_', currentSpec);
             expect(schema).to.be.deep.eq({
+              additionalProperties: { not: {} },
               default: undefined,
               description: 'Construct a type with a set of properties K of type T',
               example: undefined,
@@ -1802,7 +1803,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
             expect((propertySchema as any).allOf)
               .to.be.an('array')
               .with.length(1);
-            expect(((propertySchema as any).allOf[0] ).$ref).to.eq('#/components/schemas/Record_string.string-or-null_');
+            expect((propertySchema as any).allOf[0].$ref).to.eq('#/components/schemas/Record_string.string-or-null_');
             expect((propertySchema as any).nullable).to.eq(true);
           },
           modelsObjectIndirect: (propertyName, propertySchema) => {

@@ -67,9 +67,15 @@ export class TypeResolver {
     }
 
     if (ts.isUnionTypeNode(this.typeNode)) {
-      const types = this.typeNode.types.map(type => {
-        return new TypeResolver(type, this.current, this.parentNode, this.context).resolve();
-      });
+      const types = this.typeNode.types
+        .map(type => {
+          return new TypeResolver(type, this.current, this.parentNode, this.context).resolve();
+        })
+        .filter(type => type.dataType !== 'never');
+
+      if (types.length === 0) {
+        return { dataType: 'never' };
+      }
 
       const unionMetaType: Tsoa.UnionType = {
         dataType: 'union',
@@ -79,9 +85,23 @@ export class TypeResolver {
     }
 
     if (ts.isIntersectionTypeNode(this.typeNode)) {
-      const types = this.typeNode.types.map(type => {
+      const members = this.typeNode.types.filter(type => {
+        const resolved = type.pos === -1 ? undefined : this.current.typeChecker.getTypeFromTypeNode(type);
+        return type.kind !== ts.SyntaxKind.UnknownKeyword && !(resolved && resolved.flags & ts.TypeFlags.Unknown);
+      });
+      const types = members.map(type => {
         return new TypeResolver(type, this.current, this.parentNode, this.context).resolve();
       });
+
+      if (types.some(type => type.dataType === 'never')) {
+        return { dataType: 'never' };
+      }
+      if (types.length === 0 || members.some(type => type.kind === ts.SyntaxKind.AnyKeyword)) {
+        return { dataType: 'any' };
+      }
+      if (types.length === 1) {
+        return types[0];
+      }
 
       const intersectionMetaType: Tsoa.IntersectionType = {
         dataType: 'intersection',
@@ -118,6 +138,10 @@ export class TypeResolver {
       };
     }
 
+    if (this.typeNode.kind === ts.SyntaxKind.NeverKeyword) {
+      return { dataType: 'never' };
+    }
+
     if (this.typeNode.kind === ts.SyntaxKind.AnyKeyword || this.typeNode.kind === ts.SyntaxKind.UnknownKeyword) {
       const literallyAny: Tsoa.AnyType = {
         dataType: 'any',
@@ -137,7 +161,7 @@ export class TypeResolver {
       const properties = this.typeNode.members.filter(ts.isPropertySignature).reduce<Tsoa.Property[]>((res, propertySignature: ts.PropertySignature) => {
         const type = new TypeResolver(propertySignature.type as ts.TypeNode, this.current, propertySignature, this.context).resolve();
 
-        const def = TypeResolver.getDefault(propertySignature);
+        const def = TypeResolver.getDefault(propertySignature, this.current.typeChecker);
         const property: Tsoa.Property = {
           example: this.getNodeExample(propertySignature),
           default: def,
@@ -202,7 +226,9 @@ export class TypeResolver {
       };
 
       const calcMappedType = (type: ts.Type): Tsoa.Type => {
-        if (this.hasFlag(type, ts.TypeFlags.Union)) {
+        if (this.hasFlag(type, ts.TypeFlags.Never)) {
+          return { dataType: 'never' };
+        } else if (this.hasFlag(type, ts.TypeFlags.Union)) {
           //Intersections are not interesting somehow...
           const types = (type as ts.UnionType).types;
           const resolvedTypes = types.map(calcMappedType);
@@ -238,7 +264,7 @@ export class TypeResolver {
               const description = comments.length ? ts.displayPartsToString(comments) : undefined;
 
               const initializer = (parent as any)?.initializer;
-              const def = initializer ? getInitializerValue(initializer, this.current.typeChecker) : parent ? TypeResolver.getDefault(parent) : undefined;
+              const def = initializer ? getInitializerValue(initializer, this.current.typeChecker) : parent ? TypeResolver.getDefault(parent, this.current.typeChecker) : undefined;
 
               // Push property
               return {
@@ -285,10 +311,6 @@ export class TypeResolver {
           const indexInfos = this.current.typeChecker.getIndexInfosOfType(type);
           const indexTypes = indexInfos.flatMap(indexInfo => {
             const typeNode = this.current.typeChecker.typeToTypeNode(indexInfo.type, undefined, ts.NodeBuilderFlags.NoTruncation)!;
-            if (typeNode.kind === ts.SyntaxKind.NeverKeyword) {
-              // { [k: string]: never; }
-              return [];
-            }
             const type = new TypeResolver(typeNode, this.current, mappedTypeNode, this.context, indexInfo.type).resolve();
             return [type];
           });
@@ -322,7 +344,13 @@ export class TypeResolver {
 
     if (ts.isConditionalTypeNode(this.typeNode)) {
       const referencer = this.getReferencer();
-      const resolvedNode = this.current.typeChecker.typeToTypeNode(referencer, undefined, ts.NodeBuilderFlags.NoTruncation)!;
+      let resolvedNode = this.current.typeChecker.typeToTypeNode(referencer, undefined, ts.NodeBuilderFlags.NoTruncation)!;
+      if (ts.isTypeReferenceNode(resolvedNode)) {
+        const [, name] = this.calcTypeReferenceTypeName(resolvedNode);
+        if (inProgressTypes[name]) {
+          resolvedNode = this.current.typeChecker.typeToTypeNode(referencer, undefined, ts.NodeBuilderFlags.NoTruncation | ts.NodeBuilderFlags.InTypeAlias)!;
+        }
+      }
       return new TypeResolver(resolvedNode, this.current, this.typeNode, this.context, referencer).resolve();
     }
 
@@ -731,7 +759,7 @@ export class TypeResolver {
   }
 
   private calcMemberJsDocProperties(arg: ts.PropertySignature): string {
-    const def = TypeResolver.getDefault(arg);
+    const def = TypeResolver.getDefault(arg, this.current.typeChecker);
     const isDeprecated = isExistJSDocTag(arg, tag => tag.tagName.text === 'deprecated') || isDecorator(arg, identifier => identifier.text === 'Deprecated');
 
     const symbol = this.getSymbolAtLocation(arg.name as ts.Node);
@@ -1271,9 +1299,17 @@ export class TypeResolver {
     return getDecorators(node, identifier => identifier.text === id);
   }
 
-  public static getDefault(node: ts.Node) {
+  public static getDefault(node: ts.Node, typeChecker?: ts.TypeChecker) {
     const defaultStr = getJSDocComment(node, 'default');
     if (typeof defaultStr == 'string' && defaultStr !== 'undefined') {
+      const text = defaultStr.trim();
+      const type = typeChecker?.getTypeAtLocation(node);
+      const types = type?.isUnion() ? type.types : type ? [type] : [];
+      const valueTypes = types.filter(type => (type.flags & (ts.TypeFlags.Undefined | ts.TypeFlags.Null)) === 0);
+      const isString = valueTypes.length > 0 && valueTypes.every(type => (type.flags & ts.TypeFlags.StringLike) !== 0);
+      if (isString && !['"', "'", '`'].includes(text[0]) && text !== 'null') {
+        return text;
+      }
       let textStartCharacter: `"` | "'" | '`' | undefined = undefined;
       const inString = () => textStartCharacter !== undefined;
 

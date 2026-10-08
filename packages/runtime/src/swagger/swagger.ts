@@ -368,9 +368,10 @@ export namespace Swagger {
     required?: string[];
 
     items?: BaseSchema;
+    not?: BaseSchema;
   }
 
-  export interface Schema31 extends Omit<Schema3, 'items' | 'properties' | 'additionalProperties' | 'discriminator' | 'anyOf' | 'allOf' | 'exclusiveMinimum' | 'exclusiveMaximum'> {
+  export interface Schema31 extends Omit<Schema3, 'items' | 'properties' | 'additionalProperties' | 'discriminator' | 'anyOf' | 'allOf' | 'not' | 'exclusiveMinimum' | 'exclusiveMaximum'> {
     examples?: unknown[];
     exclusiveMinimum?: number;
     exclusiveMaximum?: number;

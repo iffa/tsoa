@@ -107,7 +107,9 @@ export abstract class SpecGenerator {
   }
 
   protected getSwaggerType(type: Tsoa.Type, title?: string): Swagger.BaseSchema {
-    if (type.dataType === 'void' || type.dataType === 'undefined') {
+    if (type.dataType === 'never') {
+      return { not: {} };
+    } else if (type.dataType === 'void' || type.dataType === 'undefined') {
       return this.getSwaggerTypeForVoid(type.dataType);
     } else if (type.dataType === 'refEnum' || type.dataType === 'refObject' || type.dataType === 'refAlias') {
       return this.getSwaggerTypeForReferenceType(type);

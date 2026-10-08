@@ -210,7 +210,7 @@ const validateRoutesConfig = async (config: Config): Promise<ExtendedRoutesConfi
 
   const noImplicitAdditionalProperties = determineNoImplicitAdditionalSetting(config.noImplicitAdditionalProperties);
 
-  const bodyCoercion = config.routes.bodyCoercion ?? true;
+  const bodyCoercion = config.routes.bodyCoercion ?? false;
 
   config.routes.basePath = config.routes.basePath || '/';
 

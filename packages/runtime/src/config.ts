@@ -283,7 +283,7 @@ export interface RoutesConfig {
   /*
    * Whether to implicitly coerce body parameters into an accepted type.
    *
-   * @default true
+   * @default false
    */
   bodyCoercion?: boolean;
 

@@ -56,7 +56,7 @@ export class PropertyTransformer extends Transformer {
       required = false;
     }
 
-    const def = TypeResolver.getDefault(propertySignature);
+    const def = TypeResolver.getDefault(propertySignature, resolver.current.typeChecker);
 
     const property: Tsoa.Property = {
       default: def,
@@ -94,7 +94,7 @@ export class PropertyTransformer extends Transformer {
     }
     let def = getInitializerValue(propertyDeclaration.initializer, resolver.current.typeChecker);
     if (def === undefined) {
-      def = TypeResolver.getDefault(propertyDeclaration);
+      def = TypeResolver.getDefault(propertyDeclaration, resolver.current.typeChecker);
     }
 
     const property: Tsoa.Property = {

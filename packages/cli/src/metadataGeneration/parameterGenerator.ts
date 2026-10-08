@@ -300,7 +300,12 @@ export class ParameterGenerator {
 
   private getQueriesParameters(parameter: ts.ParameterDeclaration): Tsoa.Parameter {
     const parameterName = (parameter.name as ts.Identifier).text;
-    const type = this.getValidatedType(parameter);
+    let type = this.getValidatedType(parameter);
+    const aliases = new Set<Tsoa.Type>();
+    while (type.dataType === 'refAlias' && !aliases.has(type)) {
+      aliases.add(type);
+      type = type.type;
+    }
 
     // Handle cases where TypeResolver doesn't properly resolve complex types
     // like Zod's z.infer types to refObject or nestedObjectLiteral

@@ -684,3 +684,91 @@ it('should throw if properties on nOl are missing', () => {
 it('should throw an Error', () => {
   expect(new ValidateError({}, '')).to.be.an.instanceof(Error);
 });
+
+describe('Request validation boundaries', () => {
+  const service = new ValidationService({}, { bodyCoercion: false, noImplicitAdditionalProperties: 'silently-remove-extras' });
+
+  it('rejects null booleans even when coercion is enabled', () => {
+    const validator = new ValidationService({}, { bodyCoercion: true, noImplicitAdditionalProperties: 'silently-remove-extras' });
+    const errors: FieldErrors = {};
+    expect(validator.ValidateParam({ dataType: 'boolean', required: true }, null, 'enabled', errors, true)).to.equal(undefined);
+    expect(errors.enabled.message).to.equal('invalid boolean value');
+  });
+
+  it('preserves literal types in strict JSON bodies and parses query literals', () => {
+    const cases: Array<{ schema: TsoaRoute.PropertySchema; value: unknown; expected: unknown }> = [
+      { schema: { dataType: 'enum', enums: [null] }, value: 'null', expected: null },
+      { schema: { dataType: 'enum', enums: ['null'] }, value: null, expected: undefined },
+      { schema: { dataType: 'enum', enums: [true] }, value: 'true', expected: true },
+      { schema: { dataType: 'enum', enums: [1] }, value: '1', expected: 1 },
+    ];
+    for (const { schema, value, expected } of cases) {
+      const bodyErrors: FieldErrors = {};
+      service.ValidateParam(schema, value, 'value', bodyErrors, true);
+      expect(bodyErrors).to.have.keys('value');
+      const queryErrors: FieldErrors = {};
+      expect(service.ValidateParam(schema, value, 'value', queryErrors, false)).to.equal(expected);
+      expect(Object.keys(queryErrors)).to.have.length(expected === undefined ? 1 : 0);
+    }
+  });
+
+  it('rejects scalar and numeric-string JSON inputs while parsing query values', () => {
+    const errors: FieldErrors = {};
+    service.ValidateParam({ dataType: 'double' }, '12', 'amount', errors, true);
+    service.ValidateParam({ dataType: 'array', array: { dataType: 'double' } }, 12, 'amounts', errors, true);
+    expect(errors).to.have.keys('amount', 'amounts');
+    const queryErrors: FieldErrors = {};
+    expect(service.ValidateParam({ dataType: 'double' }, '12', 'amount', queryErrors, false)).to.equal(12);
+    expect(service.ValidateParam({ dataType: 'array', array: { dataType: 'double' } }, '12', 'amounts', queryErrors, false)).to.deep.equal([12]);
+    expect(queryErrors).to.deep.equal({});
+  });
+
+  it('keeps nested properties when a wider untagged union member accepts them', () => {
+    const member = (extra: boolean): TsoaRoute.PropertySchema => ({
+      dataType: 'nestedObjectLiteral',
+      nestedProperties: {
+        details: {
+          dataType: 'nestedObjectLiteral',
+          nestedProperties: { name: { dataType: 'string' }, ...(extra ? { extra: { dataType: 'string' as const } } : {}) },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    });
+    const errors: FieldErrors = {};
+    const value = { details: { name: 'name', extra: 'keep' } };
+    expect(service.ValidateParam({ dataType: 'union', subSchemas: [member(false), member(true)] }, value, 'body', errors, true)).to.deep.equal(value);
+    expect(errors).to.deep.equal({});
+  });
+
+  it('validates the selected discriminated member and retains its error', () => {
+    const errors: FieldErrors = {};
+    const schema: TsoaRoute.PropertySchema = {
+      dataType: 'union',
+      subSchemas: [
+        { dataType: 'nestedObjectLiteral', nestedProperties: { type: { dataType: 'enum', enums: ['user'], required: true }, id: { dataType: 'string', required: true } } },
+        { dataType: 'nestedObjectLiteral', nestedProperties: { type: { dataType: 'enum', enums: ['guest'], required: true }, name: { dataType: 'string', required: true } } },
+      ],
+    };
+    expect(service.ValidateParam(schema, { type: 'user', id: '123' }, 'body', errors, true)).to.deep.equal({ type: 'user', id: '123' });
+    expect(errors).to.deep.equal({});
+    service.ValidateParam(schema, { type: 'user' }, 'body', errors, true);
+    expect(errors.body.message).to.include("'id' is required");
+    expect(errors.body.message).not.to.include("'name' is required");
+  });
+
+  it('reports every invalid nested array element under its full path', () => {
+    const errors: FieldErrors = {};
+    const schema: TsoaRoute.PropertySchema = {
+      dataType: 'nestedObjectLiteral',
+      nestedProperties: {
+        items: {
+          dataType: 'array',
+          array: { dataType: 'nestedObjectLiteral', nestedProperties: { prices: { dataType: 'array', array: { dataType: 'double' } } } },
+        },
+      },
+    };
+    service.ValidateParam(schema, { items: [{ prices: ['bad'] }, { prices: ['also bad'] }] }, 'body', errors, true);
+    expect(errors).to.have.keys('body.items.$0.prices.$0', 'body.items.$1.prices.$0');
+  });
+});

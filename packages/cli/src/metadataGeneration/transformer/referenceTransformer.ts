@@ -80,7 +80,7 @@ export class ReferenceTransformer extends Transformer {
     const title = resolver.getNodeTitle(declaration);
     const referenceType: Tsoa.ReferenceType = {
       dataType: 'refAlias',
-      default: TypeResolver.getDefault(declaration),
+      default: TypeResolver.getDefault(declaration, resolver.current.typeChecker),
       description: resolver.getNodeDescription(declaration),
       refName: refTypeName,
       format: resolver.getNodeFormat(declaration),

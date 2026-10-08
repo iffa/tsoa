@@ -676,6 +676,7 @@ describe('Definition generation', () => {
             expect(propertySchema.$ref).to.eq('#/definitions/Record_string.never_');
             const schema = getValidatedDefinition('Record_string.never_', currentSpec);
             expect(schema).to.be.deep.eq({
+              additionalProperties: { not: {} },
               default: undefined,
               description: 'Construct a type with a set of properties K of type T',
               example: undefined,

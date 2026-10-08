@@ -221,7 +221,7 @@ export class SpecGenerator3 extends SpecGenerator {
 
         schema[referenceType.refName] = {
           ...(swaggerType as Swagger.Schema3),
-          default: referenceType.default || swaggerType.default,
+          default: referenceType.default !== undefined ? referenceType.default : swaggerType.default,
           example: referenceType.example,
           format: format || swaggerType.format,
           description: referenceType.description,

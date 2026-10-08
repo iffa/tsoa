@@ -165,6 +165,7 @@ export function ValidateParam(
 
 export class ValidationService {
   private validationStack: Set<string> = new Set();
+  private readonly unionDiscriminators = new WeakMap<TsoaRoute.PropertySchema, { name: string; members: Map<unknown, TsoaRoute.PropertySchema> } | null>();
 
   constructor(
     private readonly models: TsoaRoute.Models,
@@ -212,7 +213,7 @@ export class ValidationService {
       case 'double':
         return this.validateFloat(name, value, fieldErrors, isBodyParam, property.validators as FloatValidator, parent);
       case 'enum':
-        return this.validateEnum(name, value, fieldErrors, property.enums, parent);
+        return this.validateEnum(name, value, fieldErrors, property.enums, parent, isBodyParam);
       case 'array':
         return this.validateArray(name, value, fieldErrors, isBodyParam, property.array, property.validators as ArrayValidator, parent);
       case 'date':
@@ -227,6 +228,9 @@ export class ValidationService {
         return this.validateIntersection(name, value, fieldErrors, isBodyParam, property.subSchemas, parent);
       case 'undefined':
         return this.validateUndefined(name, value, fieldErrors, parent);
+      case 'never':
+        fieldErrors[parent + name] = { message: 'value is not allowed', value };
+        return;
       case 'any':
         return value;
       case 'nestedObjectLiteral':
@@ -432,7 +436,7 @@ export class ValidationService {
     return numberValue;
   }
 
-  public validateEnum(name: string, value: unknown, fieldErrors: FieldErrors, members?: Array<string | number | boolean | null>, parent = ''): unknown {
+  public validateEnum(name: string, value: unknown, fieldErrors: FieldErrors, members?: Array<string | number | boolean | null>, parent = '', isBodyParam = false): unknown {
     if (!members || members.length === 0) {
       fieldErrors[parent + name] = {
         message: 'no member',
@@ -441,7 +445,10 @@ export class ValidationService {
       return;
     }
 
-    const enumMatchIndex = members.map(member => String(member)).findIndex(member => validator.equals(member, String(value)));
+    let enumMatchIndex = members.findIndex(member => member === value);
+    if (enumMatchIndex === -1 && value !== null && value !== undefined && (!isBodyParam || this.config.bodyCoercion)) {
+      enumMatchIndex = members.findIndex(member => String(member) === String(value));
+    }
 
     if (enumMatchIndex === -1) {
       const membersInQuotes = members.map(member => (typeof member === 'string' ? `'${member}'` : String(member)));
@@ -579,9 +586,6 @@ export class ValidationService {
     }
 
     if (!isBodyParam || this.config.bodyCoercion === true) {
-      if (value === undefined || value === null) {
-        return false;
-      }
       if (String(value).toLowerCase() === 'true') {
         return true;
       }
@@ -623,7 +627,7 @@ export class ValidationService {
 
     let arrayValue = [] as any[];
     const previousErrors = countFieldErrors(fieldErrors);
-    const childPath = name + '.';
+    const childPath = parent + name + '.';
     if (Array.isArray(value)) {
       arrayValue = value.map((elementValue, index) => {
         return this.ValidateParam(schema, elementValue, `$${index}`, fieldErrors, isBodyParam, childPath);
@@ -699,14 +703,17 @@ export class ValidationService {
       }
     }
 
+    const discriminator = this.getUnionDiscriminator(property);
+    const selected = discriminator && value !== null && typeof value === 'object' ? discriminator.members.get(value[discriminator.name]) : undefined;
+    const members = selected ? [selected] : property.subSchemas;
     const subFieldErrors: FieldErrors[] = [];
-    const propertyCount = value !== null && typeof value === 'object' ? Object.keys(value).length : 0;
+    const propertyCount = selected ? 0 : this.countRetainedProperties(value, value);
     let best: { value: any; retained: number } | undefined;
     // The union's own validators have to reach each member, but a union rarely carries any,
     // and without them the merged schema is the member itself.
     const unionValidators = property.validators && Object.keys(property.validators).length > 0 ? property.validators : undefined;
 
-    for (const subSchema of property.subSchemas) {
+    for (const subSchema of members) {
       const subFieldError: FieldErrors = {};
       const memberSchema = unionValidators ? { ...subSchema, validators: { ...unionValidators, ...subSchema.validators } } : subSchema;
 
@@ -720,11 +727,15 @@ export class ValidationService {
         continue;
       }
 
+      if (selected) {
+        return cleanValue;
+      }
+
       // A member that keeps every property of the value is as good as it gets, so stop.
       // Otherwise keep looking: `Partial<A | B>` distributes into members that TypeScript
       // may order narrowest first, and matching that one silently drops the properties only
       // the wider member declares.
-      const retained = this.countRetainedProperties(value, cleanValue, propertyCount);
+      const retained = this.countRetainedProperties(value, cleanValue);
       if (retained === propertyCount) {
         return cleanValue;
       }
@@ -741,15 +752,80 @@ export class ValidationService {
     return;
   }
 
+  private getUnionDiscriminator(property: TsoaRoute.PropertySchema) {
+    const cached = this.unionDiscriminators.get(property);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const schemas = property.subSchemas || [];
+    const properties = schemas.map(schema => this.getUnionMemberProperties(schema));
+    const first = properties[0];
+    if (schemas.length > 1 && first && properties.every(props => props !== undefined)) {
+      for (const name of Object.keys(first)) {
+        const members = new Map<unknown, TsoaRoute.PropertySchema>();
+        for (let index = 0; index < properties.length; index++) {
+          const candidate = properties[index]?.[name];
+          const enums = candidate?.required ? this.getLiteralMembers(candidate) : undefined;
+          if (enums?.length !== 1 || members.has(enums[0])) {
+            break;
+          }
+          members.set(enums[0], schemas[index]);
+        }
+        if (members.size === schemas.length) {
+          const discriminator = { name, members };
+          this.unionDiscriminators.set(property, discriminator);
+          return discriminator;
+        }
+      }
+    }
+    this.unionDiscriminators.set(property, null);
+    return null;
+  }
+
+  private getUnionMemberProperties(schema: TsoaRoute.PropertySchema): Record<string, TsoaRoute.PropertySchema> | undefined {
+    if (schema.ref) {
+      const model = this.models[schema.ref];
+      if (model?.dataType === 'refObject') {
+        return model.properties;
+      }
+      if (model?.dataType === 'refAlias') {
+        return this.getUnionMemberProperties(model.type);
+      }
+    }
+    if (schema.dataType === 'intersection') {
+      const properties = schema.subSchemas?.map(member => this.getUnionMemberProperties(member));
+      return properties?.every(props => props !== undefined) ? Object.assign({}, ...properties) : undefined;
+    }
+    return schema.nestedProperties;
+  }
+
+  private getLiteralMembers(schema: TsoaRoute.PropertySchema): Array<string | number | boolean | null> | undefined {
+    if (schema.ref) {
+      const model = this.models[schema.ref];
+      if (model?.dataType === 'refEnum') {
+        return model.enums;
+      }
+      if (model?.dataType === 'refAlias') {
+        return this.getLiteralMembers(model.type);
+      }
+    }
+    return schema.enums;
+  }
+
   /**
    * How many of the value's own properties survived validation against a union member.
    */
-  private countRetainedProperties(value: any, cleanValue: any, propertyCount: number): number {
-    if (propertyCount === 0 || cleanValue === null || typeof cleanValue !== 'object') {
+  private countRetainedProperties(value: unknown, cleanValue: unknown): number {
+    if (value === null || typeof value !== 'object' || cleanValue === null || typeof cleanValue !== 'object') {
       return 0;
     }
 
-    return Object.keys(value).reduce((retained, key) => (key in cleanValue ? retained + 1 : retained), 0);
+    return Object.entries(value).reduce((retained, [key, child]) => {
+      if (!Object.prototype.hasOwnProperty.call(cleanValue, key)) {
+        return retained;
+      }
+      return retained + 1 + this.countRetainedProperties(child, (cleanValue as Record<string, unknown>)[key]);
+    }, 0);
   }
 
   public validateIntersection(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, subSchemas: TsoaRoute.PropertySchema[] | undefined, parent = ''): any {
@@ -926,7 +1002,7 @@ export class ValidationService {
 
     if (modelDefinition) {
       if (modelDefinition.dataType === 'refEnum') {
-        return this.validateEnum(name, value, fieldErrors, modelDefinition.enums, parent);
+        return this.validateEnum(name, value, fieldErrors, modelDefinition.enums, parent, isBodyParam);
       }
 
       if (modelDefinition.dataType === 'refAlias') {
@@ -946,7 +1022,7 @@ export class ValidationService {
       const properties = modelDefinition.properties || {};
       const keysOnPropertiesModelDefinition = propertyNamesOf(properties);
 
-      const childPath = fieldPath + '.';
+      const childPath = fieldPath ? fieldPath + '.' : '';
 
       for (const [key, property] of propertyEntriesOf(properties)) {
         const validatedParam = this.ValidateParam(property, value[key], key, fieldErrors, isBodyParam, childPath);
