@@ -275,6 +275,7 @@ export namespace Tsoa {
   export type ReferenceType = RefEnumType | RefObjectType | RefAliasType;
 
   export interface ReferenceTypeBase extends TypeBase {
+    isUtility?: boolean;
     description?: string;
     dataType: RefTypeLiteral;
     refName: string;

@@ -7,6 +7,7 @@ import { SpecGenerator2 } from '../swagger/specGenerator2';
 import { SpecGenerator3 } from '../swagger/specGenerator3';
 import { SpecGenerator31 } from '../swagger/specGenerator31';
 import { fsMkDir, fsWriteFile } from '../utils/fs';
+import { inlineUtilitySchemas } from '../swagger/inlineUtilitySchemas';
 
 export const getSwaggerOutputPath = (swaggerConfig: ExtendedSpecConfig) => {
   const ext = swaggerConfig.yaml ? 'yaml' : 'json';
@@ -52,6 +53,8 @@ export const generateSpec = async (
     default:
       spec = new SpecGenerator31(metadata, swaggerConfig).GetSpec();
   }
+
+  spec = inlineUtilitySchemas(spec, metadata);
 
   await fsMkDir(swaggerConfig.outputDirectory, { recursive: true });
 

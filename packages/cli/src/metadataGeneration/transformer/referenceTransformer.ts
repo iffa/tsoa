@@ -78,8 +78,12 @@ export class ReferenceTransformer extends Transformer {
     const example = resolver.getNodeExample(declaration);
 
     const title = resolver.getNodeTitle(declaration);
+    const isUtility =
+      /^lib\..*\.d\.ts$/.test(declaration.getSourceFile().fileName.split(/[\\/]/).pop() || '') &&
+      ['Pick', 'Omit', 'Partial', 'Required', 'Readonly', 'Record', 'Exclude', 'Extract', 'NonNullable', 'Awaited'].includes(declaration.name.text);
     const referenceType: Tsoa.ReferenceType = {
       dataType: 'refAlias',
+      ...(isUtility && { isUtility }),
       default: TypeResolver.getDefault(declaration, resolver.current.typeChecker),
       description: resolver.getNodeDescription(declaration),
       refName: refTypeName,
