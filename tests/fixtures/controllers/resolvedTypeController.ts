@@ -11,10 +11,11 @@ type Credential = ('RFID' | 'PIN') & unknown;
 
 interface ListFilter {
   search?: string;
+  state?: State[];
   /** @minimum 1 */
   limit?: number;
 }
-type SelectedFilter = Pick<ListFilter, 'search' | 'limit'>;
+type SelectedFilter = Pick<ListFilter, 'search' | 'limit' | 'state'>;
 type UnknownValue = unknown;
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 type AliasedCredential = ('RFID' | 'PIN') & UnknownValue;

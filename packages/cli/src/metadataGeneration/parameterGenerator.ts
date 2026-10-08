@@ -378,7 +378,18 @@ export class ParameterGenerator {
     };
   }
 
-  private validateQueriesProperties(property: Tsoa.Property, parentName: string) {
+  private validateQueriesProperties(property: Tsoa.Property, parentName: string): void {
+    if (property.type.dataType === 'refAlias') {
+      return this.validateQueriesProperties({ ...property, type: property.type.type }, parentName);
+    }
+    if (property.type.dataType === 'union') {
+      for (const type of property.type.types) {
+        if (type.dataType !== 'undefined') {
+          this.validateQueriesProperties({ ...property, type }, parentName);
+        }
+      }
+      return;
+    }
     if (property.type.dataType === 'array') {
       const arrayType = property.type;
       if (arrayType.elementType.dataType === 'nestedObjectLiteral') {

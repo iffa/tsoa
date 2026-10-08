@@ -47,7 +47,7 @@ describe('Resolved request contracts', () => {
 
   it('unwraps query aliases and preserves property validators', () => {
     const parameters = spec.paths['/ResolvedTypes'].get!.parameters!;
-    expect(parameters.map(parameter => parameter.name)).to.have.members(['search', 'limit']);
+    expect(parameters.map(parameter => parameter.name)).to.have.members(['search', 'limit', 'state']);
     expect(parameters.find(parameter => parameter.name === 'limit')!.schema.minimum).to.equal(1);
     const queryType = metadata.controllers[0].methods.find(method => method.name === 'list')!.parameters[0].type;
     expect(queryType.dataType).to.equal('nestedObjectLiteral');
