@@ -68,7 +68,7 @@ export class SpecGenerator31 extends SpecGenerator3 {
       schema[key] = validators[key]!.value;
     }
 
-    return schema as ValidatorSchema;
+    return schema;
   }
 
   /**

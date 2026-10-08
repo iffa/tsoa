@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { globSync } from 'glob';
+import { globSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const configPath = ts.findConfigFile(process.cwd(), ts.sys.fileExists.bind(ts.sys), 'tsconfig.json')!;

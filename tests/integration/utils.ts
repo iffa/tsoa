@@ -1,8 +1,9 @@
 import request from 'supertest';
-import TestAgent = require('supertest/lib/agent');
+import type TestAgent from 'supertest/lib/agent';
 import { Agent } from 'http';
 import { resolve } from 'path';
 import { App } from 'supertest/types';
+const __dirname = import.meta.dirname;
 
 export function verifyRequest(app: App, verifyResponse: (err: any, res: request.Response) => any, methodOperation: (request: TestAgent<request.Test>) => request.Test, expectedStatus = 200) {
   return new Promise<void>((resolve, reject) => {

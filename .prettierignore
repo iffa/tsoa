@@ -1,2 +1,7 @@
+node_modules/
+.yarn/
+.claude/
+**/dist/
+**/routes.ts
+yarn.lock
 **/*.hbs
-*.hbs

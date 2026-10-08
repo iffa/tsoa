@@ -1,6 +1,6 @@
 import { ExtendedSpecConfig } from '../cli';
 import { Tsoa, assertNever, Swagger } from '@tsoa/runtime';
-import * as handlebars from 'handlebars';
+import handlebars from 'handlebars';
 import { GenerateMetadataError } from '../metadataGeneration/exceptions';
 import { shouldIncludeValidatorInSchema } from '../utils/validatorUtils';
 
@@ -47,7 +47,7 @@ export abstract class SpecGenerator {
 
     // A validator's value is unknown by construction; the schema keys it fills are the ones
     // shouldIncludeValidatorInSchema admits, all of which BaseSchema declares.
-    return schema as ValidatorSchema;
+    return schema;
   }
 
   protected abstract get specVersionName(): string;
@@ -200,7 +200,6 @@ export abstract class SpecGenerator {
   protected getSwaggerTypeForPrimitiveType(dataType: Tsoa.PrimitiveTypeLiteral): Swagger.BaseSchema {
     if (dataType === 'object') {
       if (process.env.NODE_ENV !== 'tsoa_test') {
-        // eslint-disable-next-line no-console
         console.warn(`The type Object is discouraged. Please consider using an interface such as:
           export interface IStringToStringDictionary {
             [key: string]: string;

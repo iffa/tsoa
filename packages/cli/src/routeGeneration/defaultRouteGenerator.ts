@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import * as handlebars from 'handlebars';
+import handlebars from 'handlebars';
 import * as path from 'path';
 import { ExtendedRoutesConfig } from '../cli';
 import { TsoaRoute, assertNever } from '@tsoa/runtime';
@@ -21,7 +21,7 @@ export class DefaultRouteGenerator extends AbstractRouteGenerator<ExtendedRoutes
     }
 
     const fileName = `${this.options.routesDir}/${this.options.routesFileName || 'routes.ts'}`;
-    const template = await fsReadFile(path.join(__dirname, 'templates/express.hbs'));
+    const template = await fsReadFile(new URL('./templates/express.hbs', import.meta.url));
     const content = this.buildContent(template.toString());
 
     if (await this.shouldWriteFile(fileName, content)) {

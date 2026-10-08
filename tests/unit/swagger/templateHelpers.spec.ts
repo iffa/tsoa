@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import 'mocha';
 import { TsoaRoute, FieldErrors, ValidationService } from '@tsoa/runtime';
-import { TypeAliasDate, TypeAliasDateTime, TypeAliasModel1, TypeAliasModel2 } from 'fixtures/testModel';
+import { TypeAliasDate, TypeAliasDateTime, TypeAliasModel1, TypeAliasModel2 } from '../../fixtures/testModel';
 
 describe('ValidationService', () => {
   describe('Model validate', () => {

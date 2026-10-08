@@ -191,7 +191,7 @@ export class ValidationService {
       case 'string':
         return this.validateString(name, value, fieldErrors, property.validators as StringValidator, parent);
       case 'boolean':
-        return this.validateBool(name, value, fieldErrors, isBodyParam, property.validators as BooleanValidator, parent);
+        return this.validateBool(name, value, fieldErrors, isBodyParam, property.validators, parent);
       case 'integer':
       case 'long':
         return this.validateInt(name, value, fieldErrors, isBodyParam, property.validators as IntegerValidator, parent);
@@ -611,16 +611,11 @@ export class ValidationService {
       return;
     }
 
-    let arrayValue = [] as any[];
     const previousErrors = countFieldErrors(fieldErrors);
     const childPath = parent + name + '.';
-    if (Array.isArray(value)) {
-      arrayValue = value.map((elementValue, index) => {
-        return this.ValidateParam(schema, elementValue, `$${index}`, fieldErrors, isBodyParam, childPath);
-      });
-    } else {
-      arrayValue = [this.ValidateParam(schema, value, '$0', fieldErrors, isBodyParam, childPath)];
-    }
+    const arrayValue: unknown[] = Array.isArray(value)
+      ? value.map((elementValue, index) => this.ValidateParam(schema, elementValue, `$${index}`, fieldErrors, isBodyParam, childPath))
+      : [this.ValidateParam(schema, value, '$0', fieldErrors, isBodyParam, childPath)];
 
     if (countFieldErrors(fieldErrors) > previousErrors) {
       return;

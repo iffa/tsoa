@@ -2,8 +2,15 @@
   "name": "@tsoa/cli",
   "description": "Build swagger-compliant REST APIs using TypeScript and Node",
   "version": "7.0.0-alpha.0",
+  "type": "module",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -19,47 +26,38 @@
     "express"
   ],
   "scripts": {
-    "build": "yarn clean && yarn tsc && yarn copy-templates",
-    "copy-templates": "copyfiles -u 1 ./src/routeGeneration/templates/*.hbs ./dist",
-    "clean": "rimraf dist tsconfig.tsbuildinfo",
-    "tsc": "tsc -b",
-    "watch": "tsc -b -w"
+    "build": "tsdown",
+    "prepack": "yarn run -T build",
+    "clean": "rimraf dist",
+    "typecheck": "node ../../node_modules/typescript/lib/tsc.js --noEmit",
+    "watch": "tsdown --watch"
   },
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",
   "dependencies": {
-    "@tsoa/runtime": "^7.0.0-alpha.0",
-    "@types/multer": "^1.4.12",
-    "fs-extra": "^11.2.0",
-    "glob": "^10.3.10",
-    "handlebars": "^4.7.8",
-    "merge-anything": "^5.1.7",
-    "minimatch": "^9.0.1",
-    "ts-deepmerge": "^7.0.2",
-    "typescript": "^5.7.2",
-    "validator": "^13.12.0",
-    "yaml": "^2.6.1",
-    "yargs": "^17.7.1"
+    "@tsoa/runtime": "workspace:^",
+    "handlebars": "4.7.10",
+    "merge-anything": "6.0.9",
+    "minimatch": "10.2.6",
+    "ts-deepmerge": "8.0.0",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "validator": "13.15.35",
+    "yaml": "2.9.1",
+    "yargs": "18.2.0"
   },
   "devDependencies": {
-    "@types/glob": "^8.1.0",
-    "@types/minimatch": "^5.1.0",
-    "@types/node": "^18.0.0",
-    "@types/validator": "^13.12.2",
-    "@types/yargs": "^17.0.33",
-    "copyfiles": "^2.4.1",
-    "rimraf": "^5.0.5"
+    "@types/validator": "13.15.10",
+    "@types/yargs": "17.0.35"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukeautry/tsoa.git"
+    "url": "git+https://github.com/iffa/tsoa.git"
   },
   "bin": {
-    "tsoa": "dist/cli.js"
+    "tsoa": "dist/bin.js"
   },
   "engines": {
-    "yarn": ">=1.9.4",
-    "node": ">=18.0.0"
+    "node": ">=24.11.0"
   },
   "engineStrict": true,
   "publishConfig": {

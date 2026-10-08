@@ -8,6 +8,7 @@ import { app } from '../fixtures/express/server';
 import { verifyFileUploadRequest } from './utils';
 
 const basePath = '/v1';
+const __dirname = import.meta.dirname;
 
 describe('Express Server With custom multer', () => {
   describe('file upload With custom multer instance', function () {
@@ -39,7 +40,8 @@ describe('Express Server With custom multer', () => {
       const formData = { wrongAttributeName: '@../package.json' };
       verifyFileUploadRequest(app, basePath + '/PostTest/File', formData, (_err, res) => {
         expect(res.status).to.equal(500);
-        expect(res.text).to.equal('{"message":"Unexpected field","name":"MulterError","status":500}');
+        expect(res.body).to.include({ name: 'MulterError', status: 500 });
+        expect(res.body.message).to.match(/Unexpected .*field/);
       });
     });
 

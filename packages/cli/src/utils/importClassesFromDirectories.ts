@@ -1,14 +1,13 @@
 import { extname } from 'path';
-import { sync } from 'glob';
+import { globSync } from 'node:fs';
 
 /**
  * Loads all exported classes from the given directory.
  */
 export function importClassesFromDirectories(directories: string[], formats = ['.ts']): string[] {
   const allFiles = directories.reduce((allDirs, dir) => {
-    // glob docs says: Please only use forward-slashes in glob expressions.
     // therefore do not do any normalization of dir path
-    return allDirs.concat(sync(dir));
+    return allDirs.concat(globSync(dir));
   }, [] as string[]);
 
   return allFiles.filter(file => {

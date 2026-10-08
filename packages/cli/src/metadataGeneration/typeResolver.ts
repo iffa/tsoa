@@ -67,9 +67,22 @@ export class TypeResolver {
     }
 
     if (ts.isUnionTypeNode(this.typeNode)) {
+      // Synthetic union nodes can reorder members; retain each member's instantiated type.
+      const referencers = new Map<string, ts.Type>();
+      const printer = this.typeNode.pos === -1 && this.referencer?.isUnion() ? ts.createPrinter() : undefined;
+      const source = printer ? ts.createSourceFile('type.ts', '', ts.ScriptTarget.Latest) : undefined;
+      if (printer && source && this.referencer?.isUnion()) {
+        for (const member of this.referencer.types) {
+          const node = this.current.typeChecker.typeToTypeNode(member, undefined, ts.NodeBuilderFlags.NoTruncation);
+          if (node) {
+            referencers.set(printer.printNode(ts.EmitHint.Unspecified, node, source), member);
+          }
+        }
+      }
       const types = this.typeNode.types
         .map(type => {
-          return new TypeResolver(type, this.current, this.parentNode, this.context).resolve();
+          const referencer = printer && source ? referencers.get(printer.printNode(ts.EmitHint.Unspecified, type, source)) : undefined;
+          return new TypeResolver(type, this.current, this.parentNode, this.context, referencer).resolve();
         })
         .filter(type => type.dataType !== 'never');
 
@@ -302,7 +315,7 @@ export class TypeResolver {
               try {
                 objectLiteral.additionalProperties = new TypeResolver(mappedTypeNode.type, this.current, mappedTypeNode, this.context).resolve();
                 return objectLiteral;
-              } catch (_error) {
+              } catch {
                 // Fall through to getIndexInfosOfType
               }
             }
@@ -396,7 +409,7 @@ export class TypeResolver {
         if (type.isIndexType()) {
           // in case of generic: keyof T. Not handles all possible cases
           const symbol = type.type.getSymbol();
-          if (symbol && symbol.getFlags() & ts.TypeFlags.TypeParameter) {
+          if (symbol && type.type.flags & ts.TypeFlags.TypeParameter) {
             const typeName = symbol.getEscapedName();
             throwUnless(typeof typeName === 'string', new GenerateMetadataError(`typeName is not string, but ${typeof typeName}`, typeNode));
 
@@ -931,7 +944,7 @@ export class TypeResolver {
 
         for (const declaration of declarations) {
           if (ts.isTypeAliasDeclaration(declaration)) {
-            const referencer = node.pos !== -1 ? this.current.typeChecker.getTypeFromTypeNode(node) : undefined;
+            const referencer = this.referencer || (node.pos !== -1 ? this.current.typeChecker.getTypeFromTypeNode(node) : undefined);
             referenceTypes.push(new ReferenceTransformer().transform(declaration, refTypeName, this, referencer));
           } else if (EnumTransformer.transformable(declaration)) {
             referenceTypes.push(new EnumTransformer().transform(this, declaration, refTypeName));
@@ -943,7 +956,6 @@ export class TypeResolver {
         this.addToLocalReferenceTypeCache(name, referenceType);
         return referenceType;
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error(`There was a problem resolving type of '${name}'.`);
         throw err;
       }
@@ -1147,7 +1159,7 @@ export class TypeResolver {
     let declarations;
     try {
       declarations = this.getModelTypeDeclarations(targetEntity);
-    } catch (error) {
+    } catch {
       // If we can't get declarations (e.g., inline object type),
       // we can't process type parameters, so return empty context
       return newContext;

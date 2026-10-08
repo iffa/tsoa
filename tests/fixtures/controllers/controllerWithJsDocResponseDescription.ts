@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Post, Route, SuccessResponse } from '@tsoa/runtime';
 import { TestModel } from '../testModel';
-import { ModelService } from 'fixtures/services/modelService';
+import { ModelService } from '../services/modelService';
 
 @Route('Controller')
 export class CustomResponseDescController extends Controller {

@@ -1,27 +1,4 @@
 {
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "sourceMap": true,
-    "composite": true,
-    "module": "commonjs",
-    "target": "es2021",
-    "lib": ["es2021"],
-    "typeRoots": ["node_modules/@types", "./typings"],
-    "downlevelIteration": true,
-    "experimentalDecorators": true,
-    "declaration": true,
-    "noUnusedLocals": true,
-    "newLine": "LF",
-    "noUnusedParameters": false,
-    "emitDecoratorMetadata": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "strict": true
-  },
-  "exclude": ["src/routeGeneration/templates/**/*.hbs"],
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../runtime" }]
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts", "tsdown.config.ts"]
 }

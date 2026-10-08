@@ -2383,7 +2383,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                     format: undefined,
                     type: 'string',
                   },
-                  keyInterface: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined, enum: ['id'], nullable: false },
+                  keyInterface: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined, enum: ['id'] },
                   optionalPublicConstructorVar: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined },
                   readonlyConstructorArgument: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined },
                   publicConstructorVar: { type: 'string', default: undefined, description: 'This is a description for publicConstructorVar', format: undefined, example: undefined },
@@ -3077,28 +3077,28 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 properties: {
                   boolValue1: {
-                    type: 'string',
+                    type: 'boolean',
                     default: true,
                     description: undefined,
                     example: undefined,
                     format: undefined,
                   },
                   boolValue2: {
-                    type: 'string',
+                    type: 'boolean',
                     default: true,
                     description: undefined,
                     example: undefined,
                     format: undefined,
                   },
                   boolValue3: {
-                    type: 'string',
+                    type: 'boolean',
                     default: false,
                     description: undefined,
                     example: undefined,
                     format: undefined,
                   },
                   boolValue4: {
-                    type: 'string',
+                    type: 'boolean',
                     default: undefined,
                     description: undefined,
                     example: undefined,
@@ -4903,7 +4903,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
         const ref: string | undefined = schema.$ref;
         if (ref) {
           const refName = ref.replace('#/components/schemas/', '');
-          return components[refName]!;
+          return components[refName];
         }
         return schema;
       }
@@ -4912,8 +4912,8 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
       const spec = new SpecGenerator31(metadata, defaultOptions).GetSpec();
       const components: Record<string, Swagger.Schema31> = spec.components.schemas ?? {};
 
-      const fixedTupleSchema = components.StringAndNumberTuple!;
-      const variadicTupleSchema = components.TupleWithRest!;
+      const fixedTupleSchema = components.StringAndNumberTuple;
+      const variadicTupleSchema = components.TupleWithRest;
 
       expect(fixedTupleSchema.type).to.equal('array');
       expect(fixedTupleSchema.prefixItems).to.be.an('array').with.lengthOf(2);

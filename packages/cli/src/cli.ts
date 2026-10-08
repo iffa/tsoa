@@ -8,6 +8,7 @@ import { generateRoutes } from './module/generate-routes';
 import { generateSpec } from './module/generate-spec';
 import { fsExists, fsReadFile } from './utils/fs';
 import { extname, isAbsolute } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { CompilerOptions } from 'typescript';
 
 const workingDir: string = process.cwd();
@@ -18,7 +19,7 @@ const getPackageJsonValue = async (key: string, defaultValue = ''): Promise<stri
     try {
       const packageJsonRaw = await fsReadFile(`${workingDir}/package.json`);
       packageJson = JSON.parse(packageJsonRaw.toString('utf8'));
-    } catch (err) {
+    } catch {
       return defaultValue;
     }
   }
@@ -51,7 +52,7 @@ const authorInformation: Promise<
 
 const isYamlExtension = (extension: string): boolean => extension === '.yaml' || extension === '.yml';
 
-const isJsExtension = (extension: string): boolean => extension === '.js' || extension === '.cjs';
+const isJsExtension = (extension: string): boolean => extension === '.js' || extension === '.mjs' || extension === '.cjs';
 
 const getConfig = async (configPath = 'tsoa.json'): Promise<Config> => {
   let config: Config;
@@ -62,7 +63,7 @@ const getConfig = async (configPath = 'tsoa.json'): Promise<Config> => {
       const configRaw = await fsReadFile(configFullPath);
       config = YAML.parse(configRaw.toString('utf8'));
     } else if (isJsExtension(ext)) {
-      const module = await import(configFullPath);
+      const module = await import(pathToFileURL(configFullPath).href);
       config = module.default || module;
     } else {
       const configRaw = await fsReadFile(configFullPath);
@@ -71,16 +72,16 @@ const getConfig = async (configPath = 'tsoa.json'): Promise<Config> => {
   } catch (err) {
     if (!(err instanceof Error)) {
       console.error(err);
-      throw Error(`Unhandled error encountered loading '${configPath}': ${String(err)}`);
+      throw Error(`Unhandled error encountered loading '${configPath}': ${String(err)}`, { cause: err });
     } else if ('code' in err && (err.code === 'MODULE_NOT_FOUND' || err.code === 'ENOENT')) {
-      throw Error(`No config file found at '${configPath}'`);
+      throw Error(`No config file found at '${configPath}'`, { cause: err });
     } else if (err.name === 'SyntaxError') {
       console.error(err);
       const errorType = isJsExtension(ext) ? 'JS' : 'JSON';
-      throw Error(`Invalid ${errorType} syntax in config at '${configPath}': ${err.message}`);
+      throw Error(`Invalid ${errorType} syntax in config at '${configPath}': ${err.message}`, { cause: err });
     } else {
       console.error(err);
-      throw Error(`Unhandled error encountered loading '${configPath}': ${err.message}`);
+      throw Error(`Unhandled error encountered loading '${configPath}': ${err.message}`, { cause: err });
     }
   }
 
@@ -123,7 +124,6 @@ export const validateSpecConfig = async (config: Config): Promise<ExtendedSpecCo
   }
 
   if (config.spec.spec && !['immediate', 'recursive', 'deepmerge', undefined].includes(config.spec.specMerging)) {
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     throw new Error(`Invalid specMerging config: ${config.spec.specMerging}`);
   }
 
@@ -317,24 +317,12 @@ export function runCLI() {
         json: jsonArgs,
         yaml: yarmlArgs,
       },
-      args => void generateSpecAndRoutes(args),
+      args => generateSpecAndRoutes(args).then(() => undefined),
     )
     .demandCommand(1, 1, 'Must provide a valid command.')
     .help('help')
     .alias('help', 'h')
-    .parse();
-}
-
-if (require.main === module) {
-  void (async () => {
-    try {
-      await runCLI();
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('tsoa cli error:\n', err);
-      process.exit(1);
-    }
-  })();
+    .parseAsync();
 }
 
 async function SpecGenerator(args: SwaggerArgs) {
@@ -358,7 +346,6 @@ async function SpecGenerator(args: SwaggerArgs) {
 
     await generateSpec(swaggerConfig, compilerOptions, config.ignore);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Generate swagger error.\n', err);
     process.exit(1);
   }
@@ -376,7 +363,6 @@ async function routeGenerator(args: ConfigArgs) {
 
     await generateRoutes(routesConfig, compilerOptions, config.ignore);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Generate routes error.\n', err);
     process.exit(1);
   }
@@ -410,7 +396,6 @@ export async function generateSpecAndRoutes(args: SwaggerArgs, metadata?: Tsoa.M
     await Promise.all([generateRoutes(routesConfig, compilerOptions, config.ignore, metadata), generateSpec(swaggerConfig, compilerOptions, config.ignore, metadata)]);
     return metadata;
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error('Generate routes error.\n', err);
     process.exit(1);
     throw err;

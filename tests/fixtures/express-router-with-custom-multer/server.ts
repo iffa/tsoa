@@ -18,7 +18,7 @@ router.use((req: any, res: any, next: express.NextFunction) => {
   next();
 });
 
-import multer = require('multer');
+import multer from 'multer';
 
 (RegisterRoutes as (router: express.Router, options: { multer: ReturnType<typeof multer> }) => void)(router, {
   multer: multer({

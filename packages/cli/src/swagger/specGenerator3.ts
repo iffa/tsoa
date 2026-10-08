@@ -101,15 +101,11 @@ export class SpecGenerator3 extends SpecGenerator {
         defs[key] = {
           scheme: 'basic',
           type: 'http',
-        } as Swagger.BasicSecurity3;
+        };
       } else if (definitions[key].type === 'oauth2') {
         /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
         const definition = definitions[key] as
-          | Swagger.OAuth2PasswordSecurity
-          | Swagger.OAuth2ApplicationSecurity
-          | Swagger.OAuth2ImplicitSecurity
-          | Swagger.OAuth2AccessCodeSecurity
-          | Swagger.OAuth2Security3;
+          Swagger.OAuth2PasswordSecurity | Swagger.OAuth2ApplicationSecurity | Swagger.OAuth2ImplicitSecurity | Swagger.OAuth2AccessCodeSecurity | Swagger.OAuth2Security3;
         const oauth = (defs[key] || {
           type: 'oauth2',
           description: definitions[key].description,
@@ -361,7 +357,6 @@ export class SpecGenerator3 extends SpecGenerator {
             return { ...acc, [exampleLabel === undefined ? `Example ${exampleCounter++}` : exampleLabel]: { value: ex } };
           }, {});
           for (const p of produces) {
-            /* eslint-disable @typescript-eslint/dot-notation */
             (swaggerResponses[res.name].content || {})[p]['examples'] = examples;
           }
         }

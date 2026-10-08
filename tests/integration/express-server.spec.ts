@@ -21,6 +21,7 @@ import {
 } from '../fixtures/testModel';
 import { verifyRequest, verifyGetRequest, verifyPostRequest, verifyFileUploadRequest } from './utils';
 import request from 'supertest';
+const __dirname = import.meta.dirname;
 
 const basePath = '/v1';
 
@@ -1735,7 +1736,8 @@ describe('Express Server', () => {
       const formData = { wrongAttributeName: '@../package.json' };
       verifyFileUploadRequest(app, basePath + '/PostTest/File', formData, (_err, res) => {
         expect(res.status).to.equal(500);
-        expect(res.text).to.equal('{"message":"Unexpected field","name":"MulterError","status":500}');
+        expect(res.body).to.include({ name: 'MulterError', status: 500 });
+        expect(res.body.message).to.match(/Unexpected .*field/);
       });
     });
 

@@ -16,13 +16,13 @@
     {
       "label": "prepareFiles",
       "group": "none",
-      "args": ["run", "pretest"],
+      "args": ["run", "prepare-test"],
       "options": { "cwd": "${workspaceFolder}/tests" }
     },
     {
       "label": "watch",
       "group": "build",
-      "args": ["run", "watch"]
+      "args": ["workspaces", "foreach", "-A", "--no-private", "-p", "run", "watch"]
     }
   ]
 }

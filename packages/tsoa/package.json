@@ -2,8 +2,15 @@
   "name": "tsoa",
   "description": "Build swagger-compliant REST APIs using TypeScript and Node",
   "version": "7.0.0-alpha.0",
+  "type": "module",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -19,30 +26,25 @@
     "express"
   ],
   "scripts": {
-    "build": "yarn tsc",
-    "tsc": "tsc -b",
-    "watch": "tsc -b -w"
+    "build": "tsdown",
+    "prepack": "yarn run -T build",
+    "clean": "rimraf dist",
+    "typecheck": "node ../../node_modules/typescript/lib/tsc.js --noEmit",
+    "watch": "tsdown --watch"
   },
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",
   "dependencies": {
-    "@tsoa/cli": "^7.0.0-alpha.0",
-    "@tsoa/runtime": "^7.0.0-alpha.0"
-  },
-  "devDependencies": {
-    "@types/node": "^18.0.0",
-    "typescript": "^5.7.2"
+    "@tsoa/cli": "workspace:^",
+    "@tsoa/runtime": "workspace:^"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukeautry/tsoa.git"
+    "url": "git+https://github.com/iffa/tsoa.git"
   },
-  "bin": {
-    "tsoa": "dist/cli.js"
-  },
+  "bin": "dist/cli.js",
   "engines": {
-    "yarn": ">=1.9.4",
-    "node": ">=18.0.0"
+    "node": ">=24.11.0"
   },
   "engineStrict": true,
   "publishConfig": {

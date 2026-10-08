@@ -2,6 +2,7 @@
   "name": "tsoa-monorepo",
   "description": "Build swagger-compliant REST APIs using TypeScript and Node",
   "private": true,
+  "type": "module",
   "keywords": [
     "typescript",
     "openapi",
@@ -15,54 +16,40 @@
   ],
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.{js,ts}": [
-      "yarn run prettier --write",
-      "yarn run lint:fix"
-    ]
-  },
   "scripts": {
-    "build": "lerna run build --stream",
-    "deploy": "yarn bump && lerna publish from-git",
-    "bump": "lerna version patch -m \"Release v%s\" --force-publish",
-    "clean": "lerna run clean --stream",
-    "prepare": "yarn build",
-    "preversion": "yarn test",
-    "test": "lerna run test --stream",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "yarn run eslint --ext .ts --fix",
-    "watch": "lerna run watch",
-    "lerna": "lerna",
-    "typedocs": "typedoc --options ./typedoc.json"
+    "build": "yarn workspace @tsoa/runtime build && yarn workspace @tsoa/cli build && yarn workspace tsoa build",
+    "check": "yarn lint && yarn workspaces foreach -A --no-private run typecheck && yarn check:packages",
+    "clean": "yarn workspaces foreach -A --exclude tsoa-monorepo run clean",
+    "test": "yarn workspace tsoa-tests test && yarn workspace tsoa-tests-esm test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "check:packages": "publint packages/runtime --pack false && publint packages/cli --pack false && publint packages/tsoa --pack false"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "6.16.0",
-    "@typescript-eslint/parser": "^6.16.0",
-    "eslint": "^8.56.0",
-    "eslint-config-prettier": "^9.1.0",
-    "husky": "^4.3.0",
-    "lerna": "^8.1.8",
-    "lint-staged": "^15.2.10",
-    "prettier": "^3.3.3",
-    "ts-node": "^10.9.2",
-    "typedoc": "^0.26.7"
+    "@eslint/js": "10.0.1",
+    "@types/node": "24.19.1",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.5.0",
+    "prettier": "3.9.9",
+    "publint": "0.3.18",
+    "rimraf": "6.1.3",
+    "tsdown": "0.23.0",
+    "tsx": "4.23.15",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-eslint": "8.71.1"
   },
   "resolutions": {
-    "typescript": "^5.2.2"
+    "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukeautry/tsoa.git"
+    "url": "git+https://github.com/iffa/tsoa.git"
   },
   "engines": {
-    "yarn": ">=1.9.4",
-    "node": ">=18.0.0"
+    "node": ">=24.11.0"
   },
   "engineStrict": true,
   "workspaces": [
@@ -70,5 +57,5 @@
     "tests",
     "tests/esm"
   ],
-  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+  "packageManager": "yarn@4.18.0"
 }

@@ -1,6 +1,6 @@
 {
   "extension": ["ts"],
-  "node-option": ["experimental-specifier-resolution=node", "loader=ts-node/esm"],
+  "node-option": ["import=tsx"],
   "spec": ["**/*.spec.ts"],
   "exit": true,
   "timeout": 5000

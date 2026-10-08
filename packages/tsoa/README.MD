@@ -33,11 +33,13 @@ OpenAPI-compliant REST APIs using TypeScript and Node
 ## Defaults
 
 Generated routes use Express 5 and ESM imports. OpenAPI defaults to 3.0.
+Packages require Node 24.11 or newer and use the TypeScript 6 compiler API. TypeScript 5 and earlier are unsupported.
 JSON bodies must match their declared types. Query, path, and multipart fields are parsed from text.
 Undeclared properties are removed, and generated files are written only when their content changes.
 Literal routes register before parameter routes across controllers. Equivalent route registrations fail with both source locations.
 
 The `tsoa` package exports runtime decorators and validation. Import generation APIs from `@tsoa/cli`; the `tsoa` executable provides the generation commands.
+Packages are built with tsdown as ESM with bundled declarations and source maps.
 
 ## Getting Started
 

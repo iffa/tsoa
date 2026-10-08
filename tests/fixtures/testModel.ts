@@ -533,8 +533,8 @@ namespace Namespace2 {
     inSecondNamespace: string;
   }
 
-  // eslint-disable-next-line @typescript-eslint/prefer-namespace-keyword, @typescript-eslint/no-namespace
-  export module Namespace2 {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  export namespace Namespace2 {
     export interface NamespaceType {
       inModule: string;
       other?: NamespaceType;
@@ -769,7 +769,6 @@ export interface HeritageBaseModel {
   value: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface HeritageTestModel2 extends HeritageBaseModel {}
 
 export interface DefaultTestModel<T = Word, U = Omit<ErrorResponseModel, 'status'>> {

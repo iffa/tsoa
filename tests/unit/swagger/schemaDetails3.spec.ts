@@ -2437,7 +2437,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                     format: undefined,
                     type: 'string',
                   },
-                  keyInterface: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined, enum: ['id'], nullable: false },
+                  keyInterface: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined, enum: ['id'] },
                   optionalPublicConstructorVar: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined },
                   readonlyConstructorArgument: { type: 'string', default: undefined, description: undefined, format: undefined, example: undefined },
                   publicConstructorVar: { type: 'string', default: undefined, description: 'This is a description for publicConstructorVar', format: undefined, example: undefined },
@@ -3132,28 +3132,28 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               {
                 properties: {
                   boolValue1: {
-                    type: 'string',
+                    type: 'boolean',
                     default: true,
                     description: undefined,
                     example: undefined,
                     format: undefined,
                   },
                   boolValue2: {
-                    type: 'string',
+                    type: 'boolean',
                     default: true,
                     description: undefined,
                     example: undefined,
                     format: undefined,
                   },
                   boolValue3: {
-                    type: 'string',
+                    type: 'boolean',
                     default: false,
                     description: undefined,
                     example: undefined,
                     format: undefined,
                   },
                   boolValue4: {
-                    type: 'string',
+                    type: 'boolean',
                     default: undefined,
                     description: undefined,
                     example: undefined,

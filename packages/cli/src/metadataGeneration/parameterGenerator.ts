@@ -131,7 +131,6 @@ export class ParameterGenerator {
     const statusArgumentTypes = statusArguments.map(a => this.current.typeChecker.getTypeAtLocation(a));
 
     const isNumberLiteralType = (tsType: ts.Type): tsType is ts.NumberLiteralType => {
-      // eslint-disable-next-line no-bitwise
       return (tsType.getFlags() & ts.TypeFlags.NumberLiteral) !== 0;
     };
 
@@ -314,11 +313,11 @@ export class ParameterGenerator {
       let typeNode = parameter.type;
       if (!typeNode) {
         const typeFromChecker = this.current.typeChecker.getTypeAtLocation(parameter);
-        typeNode = this.current.typeChecker.typeToTypeNode(typeFromChecker, undefined, ts.NodeBuilderFlags.NoTruncation) as ts.TypeNode;
+        typeNode = this.current.typeChecker.typeToTypeNode(typeFromChecker, undefined, ts.NodeBuilderFlags.NoTruncation);
       }
 
       // If it's a TypeReferenceNode (like z.infer), try to resolve it differently
-      if (ts.isTypeReferenceNode(typeNode)) {
+      if (typeNode && ts.isTypeReferenceNode(typeNode)) {
         try {
           // Try to get the actual type from the type checker
           const actualType = this.current.typeChecker.getTypeAtLocation(typeNode);
@@ -578,7 +577,10 @@ export class ParameterGenerator {
     let typeNode = parameter.type;
     if (!typeNode) {
       const type = this.current.typeChecker.getTypeAtLocation(parameter);
-      typeNode = this.current.typeChecker.typeToTypeNode(type, undefined, ts.NodeBuilderFlags.NoTruncation) as ts.TypeNode;
+      typeNode = this.current.typeChecker.typeToTypeNode(type, undefined, ts.NodeBuilderFlags.NoTruncation);
+    }
+    if (!typeNode) {
+      throw new GenerateMetadataError('Could not resolve the parameter type.', parameter);
     }
     return new TypeResolver(typeNode, this.current, parameter).resolve();
   }

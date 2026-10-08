@@ -1,8 +1,8 @@
 import 'mocha';
 import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
 import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
-import { getDefaultExtendedOptions } from 'fixtures/defaultOptions';
-import { VerifyPath } from 'unit/utilities/verifyPath';
+import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
+import { VerifyPath } from '../../utilities/verifyPath';
 
 describe('OPTIONS route generation', () => {
   const metadata = new MetadataGenerator('./fixtures/controllers/optionsController.ts').Generate();

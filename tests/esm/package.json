@@ -6,9 +6,9 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "clean": "rimraf --glob dist fixtures/*/routes.ts",
-    "pretest": "node --loader=ts-node/esm prepare.ts && ts-node --project ../tsconfig.json ../typecheck-generated.ts",
-    "test": "cross-env NODE_ENV=tsoa_test mocha"
+    "clean": "node ../../scripts/clean-routes.mjs",
+    "typecheck": "node ../../node_modules/typescript/lib/tsc.js --noEmit",
+    "test": "yarn clean && tsx prepare.ts && tsx ../typecheck-generated.ts && cross-env NODE_ENV=tsoa_test mocha"
   },
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",
@@ -17,22 +17,20 @@
     "url": "https://github.com/lukeautry/tsoa.git"
   },
   "engines": {
-    "yarn": ">=1.9.4",
-    "node": ">=18.0.0"
+    "node": ">=24.11.0"
   },
   "engineStrict": true,
   "devDependencies": {
-    "@types/chai-as-promised": "^8.0.1",
+    "@tsoa/cli": "workspace:^",
+    "@tsoa/runtime": "workspace:^",
+    "@types/chai-as-promised": "8.0.2",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^16.18.23",
-    "chai": "^4.3.10",
-    "chai-as-promised": "^7.1.1",
-    "lerna": "^8.1.9",
-    "mocha": "^10.7.3",
-    "prettier": "^3.4.2",
-    "rimraf": "^5.0.5",
-    "ts-node": "^10.9.2",
-    "tslib": "^2.8.1",
-    "typescript": "^5.7.2"
+    "@types/node": "24.19.1",
+    "chai": "6.3.0",
+    "chai-as-promised": "8.0.2",
+    "chalk": "5.6.2",
+    "cross-env": "10.1.0",
+    "mocha": "12.0.3",
+    "tsoa": "workspace:^"
   }
 }

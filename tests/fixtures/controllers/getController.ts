@@ -117,7 +117,7 @@ export class GetTestController extends Controller {
 
   @Get('ModuleRedeclarationAndNamespace')
   public async getModuleRedeclarationAndNamespace(): Promise<TsoaTest.TestModel73> {
-    return {} as TsoaTest.TestModel73;
+    return {};
   }
 
   @Get('NamespaceWithTypeCastedObject')

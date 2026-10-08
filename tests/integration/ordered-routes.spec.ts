@@ -2,6 +2,12 @@ import { expect } from 'chai';
 import express, { ErrorRequestHandler } from 'express';
 import request from 'supertest';
 import { RegisterRoutes } from '../fixtures/route-ordering/routes';
+import { Middlewares } from 'tsoa';
+import { fetchMiddlewares } from '@tsoa/runtime';
+
+const sharedMiddleware: express.RequestHandler = (_request, _response, next) => next();
+@Middlewares(sharedMiddleware)
+class SharedRuntimeController {}
 
 describe('Generated Express routes', () => {
   const app = express();
@@ -13,6 +19,10 @@ describe('Generated Express routes', () => {
     response.status(failure.status || 500).json({ fields: failure.fields });
   };
   app.use(errors);
+
+  it('shares middleware metadata across runtime entry points', () => {
+    expect(fetchMiddlewares(SharedRuntimeController)).to.deep.equal([sharedMiddleware]);
+  });
 
   it('matches literal routes before parameters across controllers', async () => {
     const bulk = await request(app).get('/ordered/items/bulk').expect(200);

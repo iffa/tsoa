@@ -1,4 +1,4 @@
 #!/usr/bin/env node
-import { runCLI } from '@tsoa/cli';
+import { runCLI } from './cli';
 
 await runCLI();

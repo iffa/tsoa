@@ -86,4 +86,17 @@ describe('Resolved request contracts', () => {
     expect(service.ValidateParam(schema, { forbidden: 1 }, 'dictionary', errors, true)).to.equal(undefined);
     expect(errors).to.have.keys('dictionary.forbidden');
   });
+
+  it('retains mapped fields inside optional union members', () => {
+    const errors: FieldErrors = {};
+    const payload = { ...validPayload, nestedRecord: { value: { id: '123' } }, nestedOmit: { value: { b: 'kept' } } };
+    const result = service.ValidateParam({ ref: 'ResolvedPayload' }, payload, 'body', errors, true);
+    expect(errors).to.deep.equal({});
+    expect(result.nestedRecord).to.deep.equal(payload.nestedRecord);
+    expect(result.nestedOmit).to.deep.equal(payload.nestedOmit);
+    const invalid: FieldErrors = {};
+    service.ValidateParam({ ref: 'ResolvedPayload' }, { ...validPayload, nestedRecord: { value: {} } }, 'body', invalid, true);
+    expect(invalid).to.have.keys('body.nestedRecord.value');
+    expect(invalid['body.nestedRecord.value'].message).to.include("'id' is required");
+  });
 });

@@ -2,7 +2,7 @@
   "extension": ["ts"],
   "timeout": "5000",
   "exclude": ["esm/**/*"],
-  "require": ["ts-node/register", "tsconfig-paths/register"],
+  "node-option": ["import=tsx"],
   "exit": true,
   "colors": true
 }

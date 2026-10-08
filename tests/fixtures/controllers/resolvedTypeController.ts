@@ -28,6 +28,8 @@ export interface ResolvedPayload {
   aliasedCredential: AliasedCredential;
   forbidden?: never;
   dictionary?: Record<string, never>;
+  nestedRecord?: Partial<{ value: Record<'id', string> }>;
+  nestedOmit?: Partial<{ value: Omit<Partial<{ a: string; b: string }>, 'a'> }>;
   /** @default Europe/Helsinki */
   timezone?: string;
   /** @default EL402 */

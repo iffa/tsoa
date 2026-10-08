@@ -1,24 +1,4 @@
 {
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src",
-    "sourceMap": true,
-    "module": "commonjs",
-    "composite": true,
-    "target": "es2021",
-    "lib": ["es2021"],
-    "typeRoots": ["node_modules/@types", "./typings"],
-    "downlevelIteration": true,
-    "experimentalDecorators": true,
-    "declaration": true,
-    "noUnusedLocals": true,
-    "newLine": "LF",
-    "noUnusedParameters": false,
-    "emitDecoratorMetadata": true,
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
-    "esModuleInterop": true,
-    "strict": true
-  },
-  "references": [{ "path": "../runtime" }, { "path": "../cli" }]
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts", "tsdown.config.ts"]
 }

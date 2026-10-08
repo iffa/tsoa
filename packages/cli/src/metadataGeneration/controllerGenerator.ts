@@ -90,7 +90,7 @@ export class ControllerGenerator {
         name,
         schema: expression.typeArguments && expression.typeArguments.length > 0 && !this.isHidden ? new TypeResolver(expression.typeArguments[0], this.current).resolve() : undefined,
         headers: getHeaderType(expression.typeArguments, 1, this.current),
-      } as Tsoa.Response;
+      };
     });
   }
 
