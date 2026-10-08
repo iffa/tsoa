@@ -1,4 +1,23 @@
 import { Body, Controller, Get, Post, Queries, Route } from '@tsoa/runtime';
+import { z } from 'zod';
+
+const statusSchema = z.enum(['active', 'disabled']);
+type InferredStatus = z.infer<typeof statusSchema>;
+const inferredSchema = z.object({ status: statusSchema, count: z.number() });
+/** A named inferred request. */
+type InferredRequest = z.infer<typeof inferredSchema>;
+/** Paginated application data. */
+interface Page<T> {
+  items: T[];
+  count: number;
+}
+type StatusPage = Page<InferredRequest>;
+type OtherStatusPage = Page<InferredRequest>;
+interface Tree<T> {
+  value: T;
+  children: Array<Tree<T>>;
+}
+type RequestTree = Tree<InferredRequest>;
 
 type State = 'new' | 'accepted' | 'dismissed';
 type StoredState = Exclude<State, 'new'>;
@@ -21,6 +40,13 @@ type UnknownValue = unknown;
 type AliasedCredential = ('RFID' | 'PIN') & UnknownValue;
 
 export interface ResolvedPayload {
+  inferred?: InferredRequest;
+  status?: InferredStatus;
+  page?: Page<InferredRequest>;
+  statePage?: Page<State>;
+  namedPage?: StatusPage;
+  otherPage?: OtherStatusPage;
+  tree?: RequestTree;
   state: StoredState;
   selected: SelectedState;
   actor: IndividualActor;

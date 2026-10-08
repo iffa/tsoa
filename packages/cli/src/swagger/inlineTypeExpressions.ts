@@ -1,14 +1,14 @@
 import { Swagger, Tsoa } from '@tsoa/runtime';
 import { GenerateMetadataError } from '../metadataGeneration/exceptions';
 
-/** Resolve compiler utility types inside the application models that use them. */
-export function inlineUtilitySchemas<T extends Swagger.Spec>(spec: T, metadata: Tsoa.Metadata): T {
-  const utilities = new Set(
+/** Resolve instantiated type expressions inside the application models that use them. */
+export function inlineTypeExpressions<T extends Swagger.Spec>(spec: T, metadata: Tsoa.Metadata): T {
+  const expressions = new Set(
     Object.values(metadata.referenceTypeMap)
-      .filter(type => type.isUtility)
+      .filter(type => type.isUtility || type.isTypeExpression)
       .map(type => type.refName),
   );
-  if (utilities.size === 0) {
+  if (expressions.size === 0) {
     return spec;
   }
 
@@ -18,31 +18,42 @@ export function inlineUtilitySchemas<T extends Swagger.Spec>(spec: T, metadata: 
     return spec;
   }
   const prefix = '#/components/schemas/';
+  const namedOwners = new Map<string, string>();
+  for (const [name, schema] of Object.entries(schemas)) {
+    if (!expressions.has(name) && isObject(schema) && typeof schema.$ref === 'string' && schema.$ref.startsWith(prefix)) {
+      const target = schema.$ref.slice(prefix.length);
+      if (expressions.has(target) && !namedOwners.has(target)) {
+        namedOwners.set(target, name);
+      }
+    }
+  }
   const resolved = new Map<string, Record<string, unknown>>();
   const resolving = new Set<string>();
 
-  function resolveUtility(name: string): Record<string, unknown> {
+  function resolveExpression(name: string): Record<string, unknown> {
     const cached = resolved.get(name);
     if (cached) {
       return cached;
     }
     if (resolving.has(name)) {
-      throw new GenerateMetadataError(`Circular compiler utility schema '${name}'.`);
+      throw new GenerateMetadataError(`Circular type expression schema '${name}'.`);
     }
     const schema = schemas![name];
     if (!isObject(schema)) {
-      throw new GenerateMetadataError(`Missing compiler utility schema '${name}'.`);
+      throw new GenerateMetadataError(`Missing type expression schema '${name}'.`);
     }
     resolving.add(name);
     const shape = { ...schema };
-    delete shape.description;
-    const result = visit(shape);
+    if (metadata.referenceTypeMap[name]?.isUtility) {
+      delete shape.description;
+    }
+    const result = visit(shape, false, name);
     resolving.delete(name);
     resolved.set(name, result);
     return result;
   }
 
-  function visit(value: Record<string, unknown>, isMap = false): Record<string, unknown> {
+  function visit(value: Record<string, unknown>, isMap = false, owner?: string): Record<string, unknown> {
     const transformed = Object.fromEntries(
       Object.entries(value).map(([key, child]) => [
         key,
@@ -54,10 +65,13 @@ export function inlineUtilitySchemas<T extends Swagger.Spec>(spec: T, metadata: 
     const ref = transformed.$ref;
     if (typeof ref === 'string' && ref.startsWith(prefix)) {
       const name = decodeURIComponent(ref.slice(prefix.length)).replace(/~1/g, '/').replace(/~0/g, '~');
-      if (utilities.has(name)) {
-        const annotations = { ...transformed };
-        delete annotations.$ref;
-        return { ...resolveUtility(name), ...annotations };
+      if (expressions.has(name)) {
+        const annotations = Object.fromEntries(Object.entries(transformed).filter(([key, value]) => key !== '$ref' && value !== undefined));
+        const namedOwner = namedOwners.get(name);
+        if (namedOwner && owner === undefined) {
+          return { $ref: `${prefix}${namedOwner}`, ...annotations };
+        }
+        return { ...resolveExpression(name), ...annotations };
       }
     }
     return transformed;
@@ -70,7 +84,11 @@ export function inlineUtilitySchemas<T extends Swagger.Spec>(spec: T, metadata: 
     return isObject(value) ? visit(value, isMap) : value;
   }
 
-  const cleanSchemas = Object.fromEntries(Object.entries(schemas).filter(([name]) => !utilities.has(name)));
+  const cleanSchemas = Object.fromEntries(
+    Object.entries(schemas)
+      .filter(([name]) => !expressions.has(name))
+      .map(([name, schema]) => [name, isObject(schema) ? visit(schema, false, name) : schema]),
+  );
   const cleanSpec = { ...root, components: { ...root.components, schemas: cleanSchemas } };
   return transform(cleanSpec) as T;
 }

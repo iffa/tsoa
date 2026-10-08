@@ -6,7 +6,7 @@ import { Tsoa, Swagger, Config } from '@tsoa/runtime';
 import { SpecGenerator3 } from '../swagger/specGenerator3';
 import { SpecGenerator31 } from '../swagger/specGenerator31';
 import { fsMkDir, fsWriteFileIfChanged } from '../utils/fs';
-import { inlineUtilitySchemas } from '../swagger/inlineUtilitySchemas';
+import { inlineTypeExpressions } from '../swagger/inlineTypeExpressions';
 
 export const getSwaggerOutputPath = (swaggerConfig: ExtendedSpecConfig) => {
   const ext = swaggerConfig.yaml ? 'yaml' : 'json';
@@ -42,7 +42,7 @@ export const generateSpec = async (
       spec = new SpecGenerator31(metadata, swaggerConfig).GetSpec();
   }
 
-  spec = inlineUtilitySchemas(spec, metadata);
+  spec = inlineTypeExpressions(spec, metadata);
 
   await fsMkDir(swaggerConfig.outputDirectory, { recursive: true });
 

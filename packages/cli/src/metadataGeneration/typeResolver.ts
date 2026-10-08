@@ -712,6 +712,7 @@ export class TypeResolver {
         // We need to create a proper ReferenceType object
         const referenceType: Tsoa.ReferenceType = {
           dataType: 'refAlias',
+          isTypeExpression: true,
           refName: uniqueName,
           type: resolvedType,
           validators: {},
@@ -953,6 +954,9 @@ export class TypeResolver {
           }
         }
         const referenceType = ReferenceTransformer.merge(referenceTypes);
+        if (node.typeArguments?.length) {
+          referenceType.isTypeExpression = true;
+        }
         this.addToLocalReferenceTypeCache(name, referenceType);
         return referenceType;
       } catch (err) {

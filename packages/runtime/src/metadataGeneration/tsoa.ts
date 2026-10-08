@@ -277,6 +277,7 @@ export namespace Tsoa {
 
   export interface ReferenceTypeBase extends TypeBase {
     isUtility?: boolean;
+    isTypeExpression?: boolean;
     description?: string;
     dataType: RefTypeLiteral;
     refName: string;
