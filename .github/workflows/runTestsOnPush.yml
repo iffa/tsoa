@@ -15,5 +15,6 @@ jobs:
       - run: corepack enable
       - run: yarn install --immutable --mode=skip-build
       - run: yarn build
-      - run: yarn check
+      # Type-aware lint reads route fixtures that the tests generate.
       - run: yarn test
+      - run: yarn check
