@@ -1,10 +1,10 @@
 import { expect } from 'chai';
 import 'mocha';
-import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
+import { MetadataGenerator } from '@iffa/tsoa-cli/metadataGeneration/metadataGenerator';
+import { SpecGenerator3 } from '@iffa/tsoa-cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
 import { VerifyPath } from '../../utilities/verifyPath';
-import type { Swagger } from '@tsoa/runtime';
+import type { Swagger } from '@iffa/tsoa-runtime';
 
 describe('Security route generation with root security', () => {
   describe('with @Security() on controller', () => {

@@ -6,10 +6,12 @@ Pronounced so·uh
 
 OpenAPI-compliant REST APIs using TypeScript and Node
 
-![build status](https://github.com/lukeautry/tsoa/actions/workflows/runTestsOnPush.yml/badge.svg)
-[![npm version](https://img.shields.io/npm/v/tsoa/latest)](https://www.npmjs.com/package/tsoa)
+![build status](https://github.com/iffa/tsoa/actions/workflows/runTestsOnPush.yml/badge.svg)
+[![npm version](https://img.shields.io/npm/v/@iffa/tsoa/latest)](https://www.npmjs.com/package/@iffa/tsoa)
 
 </div>
+
+This is a fork of [lukeautry/tsoa](https://github.com/lukeautry/tsoa), published as `@iffa/tsoa`, `@iffa/tsoa-cli` and `@iffa/tsoa-runtime`.
 
 ## Goal
 
@@ -38,7 +40,7 @@ JSON bodies must match their declared types. Query, path, and multipart fields a
 Undeclared properties are removed, and generated files are written only when their content changes.
 Literal routes register before parameter routes across controllers. Equivalent route registrations fail with both source locations.
 
-The `tsoa` package exports runtime decorators and validation. Import generation APIs from `@tsoa/cli`; the `tsoa` executable provides the generation commands.
+`@iffa/tsoa` exports runtime decorators and validation. Import generation APIs from `@iffa/tsoa-cli`; the `tsoa` executable provides the generation commands. Generated routes import from `@iffa/tsoa-runtime`.
 Packages are built with tsdown as ESM with bundled declarations and source maps.
 
 ## Getting Started

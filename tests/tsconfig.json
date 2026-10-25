@@ -5,8 +5,8 @@
     "noImplicitAny": false,
     "noImplicitReturns": false,
     "paths": {
-      "@tsoa/cli/*": ["../packages/cli/src/*"],
-      "@tsoa/runtime/*": ["../packages/runtime/src/*"]
+      "@iffa/tsoa-cli/*": ["../packages/cli/src/*"],
+      "@iffa/tsoa-runtime/*": ["../packages/runtime/src/*"]
     }
   },
   "include": ["**/*.ts"],

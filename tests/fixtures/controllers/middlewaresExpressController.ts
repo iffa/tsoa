@@ -1,4 +1,4 @@
-import { Middlewares as GenericMiddlewares, Get, Route } from '@tsoa/runtime';
+import { Middlewares as GenericMiddlewares, Get, Route } from '@iffa/tsoa-runtime';
 
 import type { NextFunction as ExpressNextFunction, Request as ExpressRequest, Response as ExpressResponse, RequestHandler } from 'express';
 

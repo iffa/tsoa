@@ -1,7 +1,7 @@
 import { expect } from 'chai';
 import 'mocha';
 import * as ts from 'typescript';
-import { getParameterValidators, getPropertyValidators } from '@tsoa/cli/utils/validatorUtils';
+import { getParameterValidators, getPropertyValidators } from '@iffa/tsoa-cli/utils/validatorUtils';
 
 describe('Validator JSDoc utilities', () => {
   describe('@pattern', () => {

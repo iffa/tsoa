@@ -1,4 +1,4 @@
-import { Swagger, Tsoa, assertNever } from '@tsoa/runtime';
+import { Swagger, Tsoa, assertNever } from '@iffa/tsoa-runtime';
 import { merge as mergeAnything } from 'merge-anything';
 import { merge as deepMerge } from 'ts-deepmerge';
 

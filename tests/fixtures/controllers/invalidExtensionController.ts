@@ -1,4 +1,4 @@
-import { Get, Route, Extension } from '@tsoa/runtime';
+import { Get, Route, Extension } from '@iffa/tsoa-runtime';
 import { ModelService } from '../services/modelService';
 import { TestModel } from '../testModel';
 

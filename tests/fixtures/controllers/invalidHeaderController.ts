@@ -1,4 +1,4 @@
-import { Get, Res, Route, TsoaResponse } from '@tsoa/runtime';
+import { Get, Res, Route, TsoaResponse } from '@iffa/tsoa-runtime';
 
 @Route('/')
 export class InvalidHeaderTestController {

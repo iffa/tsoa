@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
+import { MetadataGenerator } from '@iffa/tsoa-cli/metadataGeneration/metadataGenerator';
 
 describe('Duplicate route diagnostics', () => {
   it('rejects identical routes with both source locations', () => {

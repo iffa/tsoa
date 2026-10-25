@@ -1,7 +1,7 @@
-import { ExtendedSpecConfig } from '@tsoa/cli/cli';
-import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
-import { SpecGenerator31 } from '@tsoa/cli/swagger/specGenerator31';
+import { ExtendedSpecConfig } from '@iffa/tsoa-cli/cli';
+import { MetadataGenerator } from '@iffa/tsoa-cli/metadataGeneration/metadataGenerator';
+import { SpecGenerator3 } from '@iffa/tsoa-cli/swagger/specGenerator3';
+import { SpecGenerator31 } from '@iffa/tsoa-cli/swagger/specGenerator31';
 import { expect } from 'chai';
 import 'mocha';
 import { getDefaultExtendedOptions } from '../../fixtures/defaultOptions';

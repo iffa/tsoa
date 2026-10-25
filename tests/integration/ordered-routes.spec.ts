@@ -2,8 +2,8 @@ import { expect } from 'chai';
 import express, { ErrorRequestHandler } from 'express';
 import request from 'supertest';
 import { RegisterRoutes } from '../fixtures/route-ordering/routes';
-import { Middlewares } from 'tsoa';
-import { fetchMiddlewares } from '@tsoa/runtime';
+import { Middlewares } from '@iffa/tsoa-runtime';
+import { fetchMiddlewares } from '@iffa/tsoa-runtime';
 
 const sharedMiddleware: express.RequestHandler = (_request, _response, next) => next();
 @Middlewares(sharedMiddleware)

@@ -1,4 +1,4 @@
-import { Config, Tsoa } from '@tsoa/runtime';
+import { Config, Tsoa } from '@iffa/tsoa-runtime';
 import { minimatch } from 'minimatch';
 import * as path from 'path';
 import * as ts from 'typescript';

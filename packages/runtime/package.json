@@ -1,5 +1,5 @@
 {
-  "name": "@tsoa/runtime",
+  "name": "@iffa/tsoa-runtime",
   "description": "Build swagger-compliant REST APIs using TypeScript and Node",
   "version": "7.0.0-alpha.0",
   "type": "module",

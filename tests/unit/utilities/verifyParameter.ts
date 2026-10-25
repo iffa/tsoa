@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Swagger } from '@tsoa/runtime';
+import { Swagger } from '@iffa/tsoa-runtime';
 
 type Parameters = Array<Swagger.Parameter3 | Swagger.Parameter31>;
 

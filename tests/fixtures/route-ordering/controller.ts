@@ -1,4 +1,4 @@
-import { Body, Controller, FormField, Get, Head, Middlewares, Path, Post, Query, Request, Route, UploadedFile } from '@tsoa/runtime';
+import { Body, Controller, FormField, Get, Head, Middlewares, Path, Post, Query, Request, Route, UploadedFile } from '@iffa/tsoa-runtime';
 import type { Request as ExpressRequest, RequestHandler } from 'express';
 import { Readable } from 'node:stream';
 

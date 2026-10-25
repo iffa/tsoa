@@ -1,11 +1,11 @@
 import * as chai from 'chai';
 import 'mocha';
-import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
+import { MetadataGenerator } from '@iffa/tsoa-cli/metadataGeneration/metadataGenerator';
+import { SpecGenerator3 } from '@iffa/tsoa-cli/swagger/specGenerator3';
 import { getDefaultExtendedOptions } from '../../../fixtures/defaultOptions';
 import { VerifyPathableParameter } from '../../utilities/verifyParameter';
 import { defaultModelName, VerifyPath } from '../../utilities/verifyPath';
-import { Swagger } from '@tsoa/runtime';
+import { Swagger } from '@iffa/tsoa-runtime';
 
 describe('POST route generation', () => {
   const metadata = new MetadataGenerator('./fixtures/controllers/postController.ts').Generate();

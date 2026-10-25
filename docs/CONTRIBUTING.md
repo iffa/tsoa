@@ -71,3 +71,12 @@ Your pull request should:
   - Include baseline changes with your change
   - All changed code must have some degree of code coverage (either integrative or unit level)
 - To avoid line ending issues, set `autocrlf = input` and `whitespace = cr-at-eol` in your git configuration
+
+# Releasing
+
+`@iffa/tsoa`, `@iffa/tsoa-cli` and `@iffa/tsoa-runtime` share one version.
+
+1. Set the new `version` in `packages/runtime`, `packages/cli` and `packages/tsoa`, run `yarn install`, and commit as `chore: release <version>` on `master`.
+2. Run the **Release** workflow from the Actions tab. It builds, checks and publishes the three packages with provenance. Versions already on npm are skipped.
+
+The workflow publishes through npm trusted publishing (OIDC). Each package lists `iffa/tsoa` and `release.yml` as its trusted publisher in its npm settings. An `NPM_TOKEN` repository secret takes precedence over OIDC when it is set.

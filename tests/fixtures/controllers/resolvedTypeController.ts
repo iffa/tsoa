@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Queries, Route } from '@tsoa/runtime';
+import { Body, Controller, Get, Post, Queries, Route } from '@iffa/tsoa-runtime';
 import { z } from 'zod';
 
 const statusSchema = z.enum(['active', 'disabled']);

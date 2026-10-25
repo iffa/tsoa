@@ -1,5 +1,5 @@
 import { ExtendedSpecConfig } from '../cli';
-import { Tsoa, assertNever, Swagger } from '@tsoa/runtime';
+import { Tsoa, assertNever, Swagger } from '@iffa/tsoa-runtime';
 import handlebars from 'handlebars';
 import { GenerateMetadataError } from '../metadataGeneration/exceptions';
 import { shouldIncludeValidatorInSchema } from '../utils/validatorUtils';

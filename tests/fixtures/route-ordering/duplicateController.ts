@@ -1,4 +1,4 @@
-import { Get, Path, Route } from '@tsoa/runtime';
+import { Get, Path, Route } from '@iffa/tsoa-runtime';
 
 @Route('duplicate')
 export class FirstDuplicateController {

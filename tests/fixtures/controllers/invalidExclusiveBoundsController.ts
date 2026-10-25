@@ -1,4 +1,4 @@
-import { Body, Post, Route } from '@tsoa/runtime';
+import { Body, Post, Route } from '@iffa/tsoa-runtime';
 
 @Route('InvalidExclusiveBounds')
 export class InvalidExclusiveBoundsController {

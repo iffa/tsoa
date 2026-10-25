@@ -1,7 +1,7 @@
-import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { DefaultRouteGenerator } from '@tsoa/cli/routeGeneration/defaultRouteGenerator';
-import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
-import { FieldErrors, Swagger, TsoaRoute, ValidationService } from '@tsoa/runtime';
+import { MetadataGenerator } from '@iffa/tsoa-cli/metadataGeneration/metadataGenerator';
+import { DefaultRouteGenerator } from '@iffa/tsoa-cli/routeGeneration/defaultRouteGenerator';
+import { SpecGenerator3 } from '@iffa/tsoa-cli/swagger/specGenerator3';
+import { FieldErrors, Swagger, TsoaRoute, ValidationService } from '@iffa/tsoa-runtime';
 import { expect } from 'chai';
 import { getDefaultExtendedOptions } from '../../fixtures/defaultOptions';
 

@@ -1,4 +1,4 @@
-import { Swagger, Tsoa } from '@tsoa/runtime';
+import { Swagger, Tsoa } from '@iffa/tsoa-runtime';
 import { GenerateMetadataError } from '../metadataGeneration/exceptions';
 
 /** Resolve instantiated type expressions inside the application models that use them. */

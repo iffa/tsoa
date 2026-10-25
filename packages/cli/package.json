@@ -1,5 +1,5 @@
 {
-  "name": "@tsoa/cli",
+  "name": "@iffa/tsoa-cli",
   "description": "Build swagger-compliant REST APIs using TypeScript and Node",
   "version": "7.0.0-alpha.0",
   "type": "module",
@@ -35,7 +35,7 @@
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",
   "dependencies": {
-    "@tsoa/runtime": "workspace:^",
+    "@iffa/tsoa-runtime": "workspace:^",
     "handlebars": "4.7.10",
     "merge-anything": "6.0.9",
     "minimatch": "10.2.6",

@@ -1,8 +1,8 @@
 import { expect } from 'chai';
 import 'mocha';
-import { ReferenceTransformer } from '@tsoa/cli/metadataGeneration/transformer/referenceTransformer';
-import { GenerateMetadataError } from '@tsoa/cli/metadataGeneration/exceptions';
-import { Tsoa } from '@tsoa/runtime';
+import { ReferenceTransformer } from '@iffa/tsoa-cli/metadataGeneration/transformer/referenceTransformer';
+import { GenerateMetadataError } from '@iffa/tsoa-cli/metadataGeneration/exceptions';
+import { Tsoa } from '@iffa/tsoa-runtime';
 
 // Helper function to create Property objects with minimal required fields
 function createProperty(name: string, type: Tsoa.Type, required: boolean = true): any {

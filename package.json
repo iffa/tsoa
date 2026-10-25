@@ -17,7 +17,7 @@
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",
   "scripts": {
-    "build": "yarn workspace @tsoa/runtime build && yarn workspace @tsoa/cli build && yarn workspace tsoa build",
+    "build": "yarn workspace @iffa/tsoa-runtime build && yarn workspace @iffa/tsoa-cli build && yarn workspace @iffa/tsoa build",
     "check": "yarn lint && yarn workspaces foreach -A --no-private run typecheck && yarn check:packages",
     "clean": "yarn workspaces foreach -A --exclude tsoa-monorepo run clean",
     "test": "yarn workspace tsoa-tests test && yarn workspace tsoa-tests-esm test",

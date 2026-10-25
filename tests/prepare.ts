@@ -1,4 +1,4 @@
-import { generateRoutes, generateSpecAndRoutes } from '@tsoa/cli';
+import { generateRoutes, generateSpecAndRoutes } from '@iffa/tsoa-cli';
 
 async function prepare() {
   const metadata = await generateSpecAndRoutes({ configuration: 'tsoa.json' });

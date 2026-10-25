@@ -1,7 +1,7 @@
-import { validateRoutesConfig, validateSpecConfig } from '@tsoa/cli/cli';
-import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { fsWriteFileIfChanged } from '@tsoa/cli/utils/fs';
-import { Config } from '@tsoa/runtime';
+import { validateRoutesConfig, validateSpecConfig } from '@iffa/tsoa-cli/cli';
+import { MetadataGenerator } from '@iffa/tsoa-cli/metadataGeneration/metadataGenerator';
+import { fsWriteFileIfChanged } from '@iffa/tsoa-cli/utils/fs';
+import { Config } from '@iffa/tsoa-runtime';
 import { expect } from 'chai';
 import { mkdtemp, readFile, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';

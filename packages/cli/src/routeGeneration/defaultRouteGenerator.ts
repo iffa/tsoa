@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import handlebars from 'handlebars';
 import * as path from 'path';
 import { ExtendedRoutesConfig } from '../cli';
-import { TsoaRoute, assertNever } from '@tsoa/runtime';
+import { TsoaRoute, assertNever } from '@iffa/tsoa-runtime';
 import { fsReadFile, fsWriteFile } from '../utils/fs';
 import { convertBracesPathParams } from '../utils/pathUtils';
 import { AbstractRouteGenerator } from './routeGenerator';

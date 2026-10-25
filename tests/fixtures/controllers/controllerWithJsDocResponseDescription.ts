@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Route, SuccessResponse } from '@tsoa/runtime';
+import { Body, Controller, Get, Post, Route, SuccessResponse } from '@iffa/tsoa-runtime';
 import { TestModel } from '../testModel';
 import { ModelService } from '../services/modelService';
 

@@ -1,7 +1,7 @@
-import { MetadataGenerator } from '@tsoa/cli/metadataGeneration/metadataGenerator';
-import { inlineTypeExpressions } from '@tsoa/cli/swagger/inlineTypeExpressions';
-import { SpecGenerator3 } from '@tsoa/cli/swagger/specGenerator3';
-import { SpecGenerator31 } from '@tsoa/cli/swagger/specGenerator31';
+import { MetadataGenerator } from '@iffa/tsoa-cli/metadataGeneration/metadataGenerator';
+import { inlineTypeExpressions } from '@iffa/tsoa-cli/swagger/inlineTypeExpressions';
+import { SpecGenerator3 } from '@iffa/tsoa-cli/swagger/specGenerator3';
+import { SpecGenerator31 } from '@iffa/tsoa-cli/swagger/specGenerator31';
 import { expect } from 'chai';
 import { getDefaultExtendedOptions } from '../../fixtures/defaultOptions';
 

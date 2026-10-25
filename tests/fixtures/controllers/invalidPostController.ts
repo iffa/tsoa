@@ -1,4 +1,4 @@
-import { Body, Post, Route } from '@tsoa/runtime';
+import { Body, Post, Route } from '@iffa/tsoa-runtime';
 import { ModelService } from '../services/modelService';
 import { TestModel } from '../testModel';
 

@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { ExtendedRoutesConfig } from '../cli';
-import { Tsoa, TsoaRoute, assertNever } from '@tsoa/runtime';
+import { Tsoa, TsoaRoute, assertNever } from '@iffa/tsoa-runtime';
 import { isRefType } from '../utils/internalTypeGuards';
 import { convertBracesPathParams, normalisePath } from '../utils/pathUtils';
 import { fsExists, fsReadFile } from '../utils/fs';
