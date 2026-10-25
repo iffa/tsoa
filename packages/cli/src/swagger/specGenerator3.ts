@@ -169,7 +169,7 @@ export class SpecGenerator3 extends SpecGenerator {
           schema[referenceType.refName].additionalProperties = this.determineImplicitAdditionalPropertiesValue();
         }
 
-        if (referenceType.example) {
+        if (referenceType.example !== undefined) {
           schema[referenceType.refName].example = referenceType.example;
         }
 
@@ -203,7 +203,7 @@ export class SpecGenerator3 extends SpecGenerator {
             ],
           };
         }
-        if (referenceType.example) {
+        if (referenceType.example !== undefined) {
           schema[referenceType.refName].example = referenceType.example;
         }
         if (referenceType.title) {
