@@ -1,7 +1,7 @@
 {
   "name": "@iffa/tsoa",
   "description": "Build swagger-compliant REST APIs using TypeScript and Node",
-  "version": "7.0.0",
+  "version": "7.0.1",
   "type": "module",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
