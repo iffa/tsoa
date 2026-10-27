@@ -85,10 +85,14 @@ export class TypeResolver {
     }
 
     if (ts.isIntersectionTypeNode(this.typeNode)) {
-      const members = this.typeNode.types.filter(type => {
-        const resolved = isSynthetic(type) ? undefined : this.current.typeChecker.getTypeFromTypeNode(type);
-        return type.kind !== ts.SyntaxKind.UnknownKeyword && !(resolved && resolved.flags & ts.TypeFlags.Unknown);
-      });
+      const typeChecker = this.current.typeChecker;
+      const resolvedMembers = this.typeNode.types.map(type => ({ type, resolved: isSynthetic(type) ? undefined : typeChecker.getTypeFromTypeNode(type) }));
+      const hasPrimitive = resolvedMembers.some(({ resolved }) => resolved && resolved.flags & (ts.TypeFlags.StringLike | ts.TypeFlags.NumberLike | ts.TypeFlags.BigIntLike | ts.TypeFlags.BooleanLike));
+      const members = resolvedMembers
+        .filter(({ type, resolved }) => type.kind !== ts.SyntaxKind.UnknownKeyword && !(resolved && resolved.flags & ts.TypeFlags.Unknown))
+        // A brand such as `string & { readonly __brand?: true }` only exists in TypeScript, so the schema is the primitive.
+        .filter(({ resolved }) => !(hasPrimitive && resolved && isBrand(resolved, typeChecker)))
+        .map(({ type }) => type);
       const types = members.map(type => this.child(type).resolve());
 
       if (types.some(type => type.dataType === 'never')) {
@@ -1366,4 +1370,15 @@ export class TypeResolver {
     }
     return undefined;
   }
+}
+
+/** An object type that every primitive satisfies: only optional properties and no signatures. */
+function isBrand(type: ts.Type, typeChecker: ts.TypeChecker) {
+  return (
+    !!(type.flags & ts.TypeFlags.Object) &&
+    typeChecker.getPropertiesOfType(type).every(property => property.flags & ts.SymbolFlags.Optional) &&
+    typeChecker.getSignaturesOfType(type, ts.SignatureKind.Call).length === 0 &&
+    typeChecker.getSignaturesOfType(type, ts.SignatureKind.Construct).length === 0 &&
+    typeChecker.getIndexInfosOfType(type).length === 0
+  );
 }
