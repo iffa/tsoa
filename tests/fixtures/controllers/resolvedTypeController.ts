@@ -38,6 +38,7 @@ type SelectedFilter = Pick<ListFilter, 'search' | 'limit' | 'state'>;
 type UnknownValue = unknown;
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 type AliasedCredential = ('RFID' | 'PIN') & UnknownValue;
+type BrandedId = string & { readonly __brand?: true };
 
 export interface ResolvedPayload {
   inferred?: InferredRequest;
@@ -52,6 +53,7 @@ export interface ResolvedPayload {
   actor: IndividualActor;
   credential: Credential;
   aliasedCredential: AliasedCredential;
+  brandedId?: BrandedId;
   forbidden?: never;
   dictionary?: Record<string, never>;
   nestedRecord?: Partial<{ value: Record<'id', string> }>;

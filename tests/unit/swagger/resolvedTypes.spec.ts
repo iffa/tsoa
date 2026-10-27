@@ -62,6 +62,19 @@ describe('Resolved request contracts', () => {
     expect(errors).to.have.keys('body.credential');
   });
 
+  it('drops a brand from a branded primitive', () => {
+    const properties = spec.components.schemas!.ResolvedPayload.properties!;
+    expect(resolve(properties.brandedId)).to.include({ type: 'string' }).and.not.have.property('allOf');
+    const errors: FieldErrors = {};
+    const result = service.ValidateParam({ ref: 'ResolvedPayload' }, { ...validPayload, brandedId: '42' }, 'body', errors, true);
+    expect(errors).to.deep.equal({});
+    expect(result.brandedId).to.equal('42');
+
+    const invalid: FieldErrors = {};
+    service.ValidateParam({ ref: 'ResolvedPayload' }, { ...validPayload, brandedId: 42 }, 'body', invalid, true);
+    expect(invalid).to.have.keys('body.brandedId');
+  });
+
   it('allows an omitted never property and rejects it when supplied', () => {
     expect(spec.components.schemas!.ResolvedPayload.properties!.forbidden.not).to.deep.equal({});
     const errors: FieldErrors = {};
