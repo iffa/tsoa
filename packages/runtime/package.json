@@ -1,7 +1,7 @@
 {
   "name": "@iffa/tsoa-runtime",
   "description": "Build swagger-compliant REST APIs using TypeScript and Node",
-  "version": "7.0.1",
+  "version": "7.0.2",
   "type": "module",
   "main": "./dist/index.js",
   "typings": "./dist/index.d.ts",
