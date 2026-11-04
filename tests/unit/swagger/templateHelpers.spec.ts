@@ -1341,6 +1341,26 @@ describe('ValidationService', () => {
       expect(error[name].message).to.equal(`minItems 4`);
     });
 
+    it('should enforce maxItems of 0', () => {
+      const error: FieldErrors = {};
+      const v = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true });
+
+      const result = v.validateArray('name', ['x'], error, true, { dataType: 'string' }, { maxItems: { value: 0 } });
+
+      expect(result).to.equal(undefined);
+      expect(error.name.message).to.equal('maxItems 0');
+    });
+
+    it('should reject an oversized array before validating its elements', () => {
+      const error: FieldErrors = {};
+      const v = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true });
+
+      const result = v.validateArray('name', [1, 2, 3], error, true, { dataType: 'string' }, { maxItems: { value: 2 } });
+
+      expect(result).to.equal(undefined);
+      expect(Object.keys(error)).to.deep.equal(['name']);
+    });
+
     it('should array maxItems validate', () => {
       const name = 'name';
       const value = [80, 10, 199];
@@ -2168,6 +2188,182 @@ describe('ValidationService', () => {
 
       expect(Object.keys(fieldErrors)).to.not.be.empty;
       expect(result).to.be.undefined;
+    });
+  });
+
+  describe('Own "__proto__" key', () => {
+    const models: TsoaRoute.Models = {
+      A: { dataType: 'refObject', properties: { kind: { dataType: 'enum', enums: ['a'], required: true } }, additionalProperties: false },
+      B: { dataType: 'refObject', properties: { kind: { dataType: 'enum', enums: ['b'], required: true } }, additionalProperties: false },
+      StringRecord: { dataType: 'refObject', properties: {}, additionalProperties: { dataType: 'string' } },
+      AnyRecord: { dataType: 'refObject', properties: {}, additionalProperties: { dataType: 'any' } },
+      Open: { dataType: 'refObject', properties: { kind: { dataType: 'string', required: true } } },
+    };
+    const unionOf = (...refs: string[]): TsoaRoute.PropertySchema => ({ dataType: 'union', subSchemas: refs.map(ref => ({ ref })) });
+    const removing = () => new ValidationService(models, { noImplicitAdditionalProperties: 'silently-remove-extras', bodyCoercion: true });
+    const throwing = () => new ValidationService(models, { noImplicitAdditionalProperties: 'throw-on-extras', bodyCoercion: true });
+    const expectPlainObject = (result: Record<string, unknown>) => {
+      expect(Object.getPrototypeOf(result)).to.equal(Object.prototype);
+      expect(Object.prototype.hasOwnProperty.call(result, '__proto__')).to.be.false;
+      expect(result.isAdmin).to.be.undefined;
+    };
+
+    it('should remove it from the matching union member', () => {
+      const errors: FieldErrors = {};
+
+      const result = removing().validateUnion('body', JSON.parse('{"kind":"a","__proto__":{"isAdmin":true}}'), errors, true, unionOf('A', 'B'));
+
+      expect(errors).to.deep.equal({});
+      expect(result).to.deep.equal({ kind: 'a' });
+      expectPlainObject(result);
+    });
+
+    it('should report it as an excess property of a union member with throw-on-extras', () => {
+      const errors: FieldErrors = {};
+
+      const result = throwing().validateUnion('body', JSON.parse('{"kind":"a","__proto__":{"isAdmin":true}}'), errors, true, unionOf('A', 'B'));
+
+      expect(result).to.be.undefined;
+      expect(errors.body.message).to.contain('__proto__');
+    });
+
+    it('should remove it from a record model inside a union', () => {
+      const errors: FieldErrors = {};
+
+      const stringResult = removing().validateUnion('body', JSON.parse('{"a":"b","__proto__":"x"}'), errors, true, unionOf('StringRecord'));
+      const anyResult = removing().validateUnion('body', JSON.parse('{"a":"b","__proto__":{"isAdmin":true}}'), errors, true, unionOf('AnyRecord'));
+
+      expect(errors).to.deep.equal({});
+      expect(stringResult).to.deep.equal({ a: 'b' });
+      expect(anyResult).to.deep.equal({ a: 'b' });
+      expectPlainObject(stringResult);
+      expectPlainObject(anyResult);
+    });
+
+    it('should remove it from a model with default additional properties', () => {
+      const errors: FieldErrors = {};
+
+      const result = removing().validateModel({
+        name: 'body',
+        value: JSON.parse('{"kind":"a","other":1,"__proto__":{"isAdmin":true}}'),
+        modelDefinition: models.Open,
+        fieldErrors: errors,
+        isBodyParam: true,
+      });
+
+      expect(errors).to.deep.equal({});
+      expect(result).to.deep.equal({ kind: 'a', other: 1 });
+      expectPlainObject(result);
+    });
+
+    it('should report it as an excess property of a record model with throw-on-extras', () => {
+      const errors: FieldErrors = {};
+
+      const result = throwing().validateModel({ name: 'body', value: JSON.parse('{"a":"b","__proto__":"x"}'), modelDefinition: models.StringRecord, fieldErrors: errors, isBodyParam: true });
+
+      expect(result).to.be.undefined;
+      expect(errors).to.deep.equal({ 'body.__proto__': { message: '"__proto__" is an excess property and therefore is not allowed', value: '__proto__' } });
+    });
+
+    it('should treat it as an excess property of a nested object literal with additionalProperties', () => {
+      const nestedProperties: { [name: string]: TsoaRoute.PropertySchema } = { kind: { dataType: 'string', required: true } };
+      const removeErrors: FieldErrors = {};
+      const throwErrors: FieldErrors = {};
+
+      const removed = removing().validateNestedObjectLiteral('body', JSON.parse('{"kind":"a","__proto__":"x"}'), removeErrors, true, nestedProperties, { dataType: 'string' }, '');
+      const thrown = throwing().validateNestedObjectLiteral('body', JSON.parse('{"kind":"a","__proto__":"x"}'), throwErrors, true, nestedProperties, { dataType: 'string' }, '');
+
+      expect(removeErrors).to.deep.equal({});
+      expect(removed).to.deep.equal({ kind: 'a' });
+      expectPlainObject(removed);
+      expect(thrown).to.be.undefined;
+      expect(throwErrors.body.message).to.equal('"__proto__" is an excess property and therefore is not allowed');
+    });
+
+    it('should not change the prototype when additional properties are ignored', () => {
+      const v = new ValidationService(models, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true });
+      const errors: FieldErrors = {};
+
+      const result = v.validateModel({ name: 'body', value: JSON.parse('{"a":"b","__proto__":{"isAdmin":true}}'), modelDefinition: models.AnyRecord, fieldErrors: errors, isBodyParam: true });
+
+      expect(errors).to.deep.equal({});
+      expect(Object.getPrototypeOf(result)).to.equal(Object.prototype);
+      expect(result.isAdmin).to.be.undefined;
+    });
+
+    it('should keep other additional properties untouched', () => {
+      const errors: FieldErrors = {};
+
+      const result = removing().validateUnion('body', { a: 'b', constructor: 'c', prototype: 'd' }, errors, true, unionOf('StringRecord'));
+
+      expect(errors).to.deep.equal({});
+      expect(result).to.deep.equal({ a: 'b', constructor: 'c', prototype: 'd' });
+    });
+  });
+
+  describe('Buffer validate', () => {
+    const v = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: false });
+
+    it('should convert strings, buffers and byte arrays', () => {
+      expect(v.validateBuffer('b', 'text', {})?.toString()).to.equal('text');
+      expect(v.validateBuffer('b', Buffer.from('raw'), {})?.toString()).to.equal('raw');
+      expect(v.validateBuffer('b', [104, 105], {})?.toString()).to.equal('hi');
+    });
+
+    for (const [label, value] of [
+      ['an object with a length', { length: 1e9 }],
+      ['a number', 5],
+      ['an array holding a non-byte', [256]],
+    ] as const) {
+      it(`should report ${label} as a field error`, () => {
+        const errors: FieldErrors = {};
+
+        expect(v.validateBuffer('b', value, errors, 'body.')).to.be.undefined;
+        expect(errors['body.b'].message).to.equal('invalid buffer value');
+      });
+    }
+  });
+
+  describe('Enum coercion', () => {
+    it('should not match an array against a member when coercing a non-body value', () => {
+      const errors: FieldErrors = {};
+      const v = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true });
+
+      expect(v.validateEnum('role', ['admin'], errors, ['admin', 'user'])).to.be.undefined;
+      expect(errors.role).to.exist;
+    });
+  });
+
+  describe('Summarized errors', () => {
+    it('should truncate an oversized value on a union error', () => {
+      const errors: FieldErrors = {};
+      const v = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: false, maxValidationErrorSize: 50 });
+      const subSchemas: TsoaRoute.PropertySchema[] = [{ dataType: 'integer' }, { dataType: 'boolean' }];
+
+      v.validateUnion('body', 'x'.repeat(500), errors, true, { dataType: 'union', subSchemas });
+
+      expect(errors.body.value).to.equal(`${'x'.repeat(50)}...`);
+    });
+
+    it('should keep a value that fits on a union error', () => {
+      const errors: FieldErrors = {};
+      const v = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: false });
+      const subSchemas: TsoaRoute.PropertySchema[] = [{ dataType: 'integer' }, { dataType: 'boolean' }];
+
+      v.validateUnion('body', 'short', errors, true, { dataType: 'union', subSchemas });
+
+      expect(errors.body.value).to.equal('short');
+    });
+  });
+
+  describe('uniqueItems', () => {
+    it('should reject repeated values and keep distinct ones', () => {
+      const v = new ValidationService({}, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true });
+      const repeated: FieldErrors = {};
+
+      expect(v.validateArray('name', ['a', 'a'], repeated, true, { dataType: 'string' }, { uniqueItems: {} })).to.be.undefined;
+      expect(repeated.name.message).to.equal('required unique array');
+      expect(v.validateArray('name', ['a', 'b'], {}, true, { dataType: 'string' }, { uniqueItems: {} })).to.deep.equal(['a', 'b']);
     });
   });
 });

@@ -149,6 +149,23 @@ function schemaReachesRef(models: TsoaRoute.Models, schema: TsoaRoute.PropertySc
   return children.some(child => schemaReachesRef(models, child, target, visited));
 }
 
+const PROTOTYPE_KEY = '__proto__';
+
+// Same identity semantics as an indexOf scan: NaN never matches, objects compare by reference.
+function hasDuplicateItems(items: unknown[]): boolean {
+  const seen = new Set<unknown>();
+  for (const item of items) {
+    if (Number.isNaN(item)) {
+      continue;
+    }
+    if (seen.has(item)) {
+      return true;
+    }
+    seen.add(item);
+  }
+  return false;
+}
+
 export class ValidationService {
   private validationStack: Set<string> = new Set();
   private readonly unionDiscriminators = new WeakMap<TsoaRoute.PropertySchema, { name: string; members: Map<unknown, TsoaRoute.PropertySchema> } | null>();
@@ -207,7 +224,7 @@ export class ValidationService {
       case 'datetime':
         return this.validateDateTime(name, value, fieldErrors, isBodyParam, property.validators as DateTimeValidator, parent);
       case 'buffer':
-        return this.validateBuffer(name, value);
+        return this.validateBuffer(name, value, fieldErrors, parent);
       case 'union':
         return this.validateUnion(name, value, fieldErrors, isBodyParam, property, parent);
       case 'intersection':
@@ -282,7 +299,7 @@ export class ValidationService {
 
     const propHandling = this.config.noImplicitAdditionalProperties;
     if (propHandling !== 'ignore') {
-      const excessProps = additionalProperties ? [] : Object.keys(value).filter(key => !propertyNamesOf(nestedProperties).has(key));
+      const excessProps = this.getExcessPropertiesFor({ dataType: 'refObject', properties: nestedProperties, additionalProperties }, Object.keys(value));
       if (excessProps.length > 0) {
         if (propHandling === 'silently-remove-extras') {
           excessProps.forEach(excessProp => {
@@ -310,7 +327,7 @@ export class ValidationService {
     }
 
     if (typeof additionalProperties === 'object' && typeof value === 'object') {
-      const keys = Object.keys(value).filter(key => typeof nestedProperties[key] === 'undefined');
+      const keys = Object.keys(value).filter(key => typeof nestedProperties[key] === 'undefined' && key !== PROTOTYPE_KEY);
       keys.forEach(key => {
         const validatedProp = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, childPath);
         // Add value from validator if it's not undefined or if value is required and unfedined is valid type
@@ -432,7 +449,7 @@ export class ValidationService {
     }
 
     let enumMatchIndex = members.findIndex(member => member === value);
-    if (enumMatchIndex === -1 && value !== null && value !== undefined && (!isBodyParam || this.config.bodyCoercion)) {
+    if (enumMatchIndex === -1 && value !== null && value !== undefined && typeof value !== 'object' && (!isBodyParam || this.config.bodyCoercion)) {
       enumMatchIndex = members.findIndex(member => String(member) === String(value));
     }
 
@@ -611,6 +628,23 @@ export class ValidationService {
       return;
     }
 
+    // Counted before the elements are validated, so an oversized array is rejected without processing it.
+    const itemCount = Array.isArray(value) ? value.length : 1;
+    if (validators?.minItems?.value !== undefined && validators.minItems.value > itemCount) {
+      fieldErrors[parent + name] = {
+        message: validators.minItems.errorMsg || `minItems ${validators.minItems.value}`,
+        value,
+      };
+      return;
+    }
+    if (validators?.maxItems?.value !== undefined && validators.maxItems.value < itemCount) {
+      fieldErrors[parent + name] = {
+        message: validators.maxItems.errorMsg || `maxItems ${validators.maxItems.value}`,
+        value,
+      };
+      return;
+    }
+
     const previousErrors = countFieldErrors(fieldErrors);
     const childPath = parent + name + '.';
     const arrayValue: unknown[] = Array.isArray(value)
@@ -621,45 +655,28 @@ export class ValidationService {
       return;
     }
 
-    if (!validators) {
-      return arrayValue;
-    }
-    if (validators.minItems && validators.minItems.value) {
-      if (validators.minItems.value > arrayValue.length) {
-        fieldErrors[parent + name] = {
-          message: validators.minItems.errorMsg || `minItems ${validators.minItems.value}`,
-          value,
-        };
-        return;
-      }
-    }
-    if (validators.maxItems && validators.maxItems.value) {
-      if (validators.maxItems.value < arrayValue.length) {
-        fieldErrors[parent + name] = {
-          message: validators.maxItems.errorMsg || `maxItems ${validators.maxItems.value}`,
-          value,
-        };
-        return;
-      }
-    }
-    if (validators.uniqueItems) {
-      const unique = arrayValue.some((elem, index, arr) => {
-        const indexOf = arr.indexOf(elem);
-        return indexOf > -1 && indexOf !== index;
-      });
-      if (unique) {
-        fieldErrors[parent + name] = {
-          message: validators.uniqueItems.errorMsg || `required unique array`,
-          value,
-        };
-        return;
-      }
+    if (validators?.uniqueItems && hasDuplicateItems(arrayValue)) {
+      fieldErrors[parent + name] = {
+        message: validators.uniqueItems.errorMsg || `required unique array`,
+        value,
+      };
+      return;
     }
     return arrayValue;
   }
 
-  public validateBuffer(_name: string, value: string) {
-    return Buffer.from(value);
+  public validateBuffer(name: string, value: unknown, fieldErrors: FieldErrors, parent = '') {
+    if (typeof value === 'string' || Buffer.isBuffer(value)) {
+      return Buffer.from(value);
+    }
+    if (Array.isArray(value) && value.every(byte => Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
+      return Buffer.from(value);
+    }
+    fieldErrors[parent + name] = {
+      message: 'invalid buffer value',
+      value,
+    };
+    return;
   }
 
   public validateUnion(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, property: TsoaRoute.PropertySchema, parent = ''): any {
@@ -988,12 +1005,13 @@ export class ValidationService {
   }
 
   private getExcessPropertiesFor(modelDefinition: TsoaRoute.RefObjectModelSchema, properties: string[]): string[] {
-    if (modelDefinition.additionalProperties || this.config.noImplicitAdditionalProperties === 'ignore') {
+    if (this.config.noImplicitAdditionalProperties === 'ignore') {
       return [];
     }
 
     const modelProperties = propertyNamesOf(modelDefinition.properties);
-    return properties.filter(property => !modelProperties.has(property));
+    const excessProperties = properties.filter(property => !modelProperties.has(property));
+    return modelDefinition.additionalProperties ? excessProperties.filter(property => property === PROTOTYPE_KEY) : excessProperties;
   }
 
   public validateModel(input: { name: string; value: any; modelDefinition: TsoaRoute.ModelSchema; fieldErrors: FieldErrors; isBodyParam: boolean; parent?: string }): any {
@@ -1038,36 +1056,43 @@ export class ValidationService {
       const isAnExcessProperty = (objectKeyThatMightBeExcess: string) => !keysOnPropertiesModelDefinition.has(objectKeyThatMightBeExcess);
 
       const additionalProperties = modelDefinition.additionalProperties;
+      const propHandling = this.config.noImplicitAdditionalProperties;
+
+      const rejectExcessProperty = (key: string) => {
+        if (propHandling === 'throw-on-extras') {
+          fieldErrors[`${fieldPath}.${key}`] = {
+            message: `"${key}" is an excess property and therefore is not allowed`,
+            value: key,
+          };
+        } else if (propHandling === 'silently-remove-extras') {
+          delete value[key];
+        } else if (propHandling !== 'ignore') {
+          assertNever(propHandling);
+        }
+      };
+
+      // An own "__proto__" key is never an allowed additional property: any later assignment
+      // or Object.assign of the validated value would make it the target's prototype.
+      if (additionalProperties !== false && Object.prototype.hasOwnProperty.call(value, PROTOTYPE_KEY) && isAnExcessProperty(PROTOTYPE_KEY)) {
+        rejectExcessProperty(PROTOTYPE_KEY);
+      }
 
       if (additionalProperties === true || isDefaultForAdditionalPropertiesAllowed(additionalProperties)) {
         // then don't validate any of the additional properties
       } else if (additionalProperties === false) {
-        const propHandling = this.config.noImplicitAdditionalProperties;
-
         if (propHandling !== 'ignore') {
           const keys = Object.keys(value);
 
           for (let index = 0; index < keys.length; index++) {
             const key = keys[index];
-            if (!isAnExcessProperty(key)) {
-              continue;
-            }
-
-            if (propHandling === 'throw-on-extras') {
-              fieldErrors[`${fieldPath}.${key}`] = {
-                message: `"${key}" is an excess property and therefore is not allowed`,
-                value: key,
-              };
-            } else if (propHandling === 'silently-remove-extras') {
-              delete value[key];
-            } else {
-              assertNever(propHandling);
+            if (isAnExcessProperty(key)) {
+              rejectExcessProperty(key);
             }
           }
         }
       } else {
         Object.keys(value).forEach((key: string) => {
-          if (isAnExcessProperty(key)) {
+          if (isAnExcessProperty(key) && key !== PROTOTYPE_KEY) {
             const validatedValue = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, childPath);
             // Add value from validator if it's not undefined or if value is required and unfedined is valid type
             if (validatedValue !== undefined || (additionalProperties.dataType === 'undefined' && additionalProperties.required)) {
@@ -1141,11 +1166,16 @@ export class ValidationService {
       return Buffer.from(obj) as any;
     }
 
-    // Handle plain objects
+    // Handle plain objects. Assigning an own "__proto__" key would replace the clone's prototype.
     const cloneObj: any = {};
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        cloneObj[key] = this.deepClone(obj[key]);
+        const cloned = this.deepClone(obj[key]);
+        if (key === PROTOTYPE_KEY) {
+          Object.defineProperty(cloneObj, key, { value: cloned, enumerable: true, writable: true, configurable: true });
+        } else {
+          cloneObj[key] = cloned;
+        }
       }
     }
     return cloneObj;
@@ -1164,8 +1194,25 @@ export class ValidationService {
 
     fieldErrors[errorKey] = {
       message: `${prefix}${this.summarizeValidationErrors(subErrors, maxErrorLength)}`,
-      value,
+      value: this.truncateErrorValue(value),
     };
+  }
+
+  /**
+   * Replaces a value whose string or JSON form exceeds the error size limit with a truncated string
+   */
+  private truncateErrorValue(value: unknown): unknown {
+    const maxLength = this.config.maxValidationErrorSize || 1000;
+    let serialized: string | undefined;
+    try {
+      serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    } catch {
+      return value;
+    }
+    if (serialized === undefined || serialized.length <= maxLength) {
+      return value;
+    }
+    return `${serialized.substring(0, maxLength)}...`;
   }
 
   /**
