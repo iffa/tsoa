@@ -1,4 +1,6 @@
-import validator from 'validator';
+import isInt from 'validator/lib/isInt.js';
+import isISO8601 from 'validator/lib/isISO8601.js';
+import matches from 'validator/lib/matches.js';
 import { assertNever } from '../utils/assertNever';
 import { AdditionalProps } from './additionalProps';
 import { TsoaRoute, isDefaultForAdditionalPropertiesAllowed } from './tsoa-route';
@@ -367,7 +369,7 @@ export class ValidationService {
 
   public validateInt(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, validators?: IntegerValidator, parent = '') {
     const stringValue = String(value);
-    const intValue = validator.isInt(stringValue) ? toFiniteNumber(stringValue, text => parseInt(text, 10)) : undefined;
+    const intValue = isInt(stringValue) ? toFiniteNumber(stringValue, text => parseInt(text, 10)) : undefined;
     if (!this.hasCorrectJsType(value, 'number', isBodyParam) || intValue === undefined) {
       let message = `invalid integer number`;
       if (validators) {
@@ -466,7 +468,7 @@ export class ValidationService {
   }
 
   public validateDate(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, validators?: DateValidator, parent = '') {
-    if (!this.hasCorrectJsType(value, 'string', isBodyParam) || !validator.isISO8601(String(value), { strict: true })) {
+    if (!this.hasCorrectJsType(value, 'string', isBodyParam) || !isISO8601(String(value), { strict: true })) {
       const message = validators && validators.isDate && validators.isDate.errorMsg ? validators.isDate.errorMsg : `invalid ISO 8601 date format, i.e. YYYY-MM-DD`;
       fieldErrors[parent + name] = {
         message,
@@ -503,7 +505,7 @@ export class ValidationService {
   }
 
   public validateDateTime(name: string, value: any, fieldErrors: FieldErrors, isBodyParam: boolean, validators?: DateTimeValidator, parent = '') {
-    if (!this.hasCorrectJsType(value, 'string', isBodyParam) || !validator.isISO8601(String(value), { strict: true })) {
+    if (!this.hasCorrectJsType(value, 'string', isBodyParam) || !isISO8601(String(value), { strict: true })) {
       const message = validators && validators.isDateTime && validators.isDateTime.errorMsg ? validators.isDateTime.errorMsg : `invalid ISO 8601 datetime format, i.e. YYYY-MM-DDTHH:mm:ss`;
       fieldErrors[parent + name] = {
         message,
@@ -572,7 +574,7 @@ export class ValidationService {
       }
     }
     if (validators.pattern && validators.pattern.value) {
-      if (!validator.matches(String(stringValue), validators.pattern.value)) {
+      if (!matches(String(stringValue), validators.pattern.value)) {
         fieldErrors[parent + name] = {
           message: validators.pattern.errorMsg || `Not match in '${validators.pattern.value}'`,
           value,
