@@ -34,16 +34,7 @@ export class MetadataGenerator {
     TypeResolver.clearCache();
     const resolvedOptions = tsconfigPath ? this.resolveCompilerOptionsFromTsconfig(tsconfigPath, compilerOptions) : compilerOptions || {};
     const rootFiles = controllers ? this.resolveControllerFiles(controllers) : [entryFile];
-    this.program = createProgram(
-      rootFiles,
-      resolvedOptions,
-      createNativeDeclarationHost(
-        rootFiles.map(file => path.resolve(file)),
-        resolvedOptions,
-        compilerOptions,
-        tsconfigPath,
-      ),
-    );
+    this.program = createProgram(rootFiles, resolvedOptions, createNativeDeclarationHost(rootFiles, resolvedOptions, compilerOptions, tsconfigPath));
     this.typeChecker = this.program.getTypeChecker();
   }
 

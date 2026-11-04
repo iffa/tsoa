@@ -29,6 +29,9 @@ const loadNativeCompiler = (): NativeCompiler | undefined => {
   }
 };
 
+/** Compilers name files absolute and with forward slashes on every platform. */
+const compilerPath = (fileName: string) => path.resolve(fileName).split(path.sep).join('/');
+
 const isOverlayable = (fileName: string) => !fileName.includes('/node_modules/') && !fileName.endsWith('.d.ts') && /\.[cm]?tsx?$/.test(fileName);
 
 /** tsoa reads decorators and class property initializers from the source, and declarations drop both. */
@@ -273,11 +276,12 @@ export function createNativeDeclarationHost(
     return undefined;
   }
 
+  const roots = rootFiles.map(compilerPath);
   let overlay: Map<string, string>;
   try {
     const api = new native.API({ cwd: tsconfigPath ? path.dirname(tsconfigPath) : process.cwd() });
     try {
-      const program = api.createProgram(rootFiles, {
+      const program = api.createProgram(roots, {
         ...(tsconfigPath ? api.parseConfigFile(tsconfigPath).options : {}),
         ...overrides,
         composite: false,
@@ -289,7 +293,7 @@ export function createNativeDeclarationHost(
         removeComments: false,
         stripInternal: false,
       });
-      overlay = collectOverlay(program, rootFiles, options);
+      overlay = collectOverlay(program, roots, options);
     } finally {
       api.close();
     }
@@ -301,7 +305,7 @@ export function createNativeDeclarationHost(
   const host = ts.createCompilerHost(options);
   const getSourceFile = host.getSourceFile.bind(host);
   host.getSourceFile = (fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) => {
-    const text = overlay.get(path.resolve(fileName));
+    const text = overlay.get(compilerPath(fileName));
     return text === undefined ? getSourceFile(fileName, languageVersionOrOptions, onError, shouldCreateNewSourceFile) : ts.createSourceFile(fileName, text, languageVersionOrOptions);
   };
   return host;
