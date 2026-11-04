@@ -7,6 +7,7 @@ import { getDecorators } from '../utils/decoratorUtils';
 import { importClassesFromDirectories } from '../utils/importClassesFromDirectories';
 import { ControllerGenerator } from './controllerGenerator';
 import { GenerateMetadataError } from './exceptions';
+import { createNativeDeclarationHost } from './nativeDeclarations';
 import { TypeResolver } from './typeResolver';
 import { routePath, routeSignature } from '../utils/routePaths';
 
@@ -32,7 +33,17 @@ export class MetadataGenerator {
   ) {
     TypeResolver.clearCache();
     const resolvedOptions = tsconfigPath ? this.resolveCompilerOptionsFromTsconfig(tsconfigPath, compilerOptions) : compilerOptions || {};
-    this.program = controllers ? this.setProgramToDynamicControllersFiles(controllers, resolvedOptions) : createProgram([entryFile], resolvedOptions);
+    const rootFiles = controllers ? this.resolveControllerFiles(controllers) : [entryFile];
+    this.program = createProgram(
+      rootFiles,
+      resolvedOptions,
+      createNativeDeclarationHost(
+        rootFiles.map(file => path.resolve(file)),
+        resolvedOptions,
+        compilerOptions,
+        tsconfigPath,
+      ),
+    );
     this.typeChecker = this.program.getTypeChecker();
   }
 
@@ -72,13 +83,13 @@ export class MetadataGenerator {
     };
   }
 
-  private setProgramToDynamicControllersFiles(controllers: string[], resolvedOptions: CompilerOptions): Program {
+  private resolveControllerFiles(controllers: string[]): string[] {
     const allGlobFiles = importClassesFromDirectories(controllers, ['.mts', '.ts']);
     if (allGlobFiles.length === 0) {
       throw new GenerateMetadataError(`[${controllers.join(', ')}] globs found 0 controllers.`);
     }
 
-    return createProgram(allGlobFiles, resolvedOptions);
+    return allGlobFiles;
   }
 
   private extractNodeFromProgramSourceFiles() {
