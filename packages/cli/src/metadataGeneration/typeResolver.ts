@@ -87,7 +87,9 @@ export class TypeResolver {
     if (ts.isIntersectionTypeNode(this.typeNode)) {
       const typeChecker = this.current.typeChecker;
       const resolvedMembers = this.typeNode.types.map(type => ({ type, resolved: isSynthetic(type) ? undefined : typeChecker.getTypeFromTypeNode(type) }));
-      const hasPrimitive = resolvedMembers.some(({ resolved }) => resolved && resolved.flags & (ts.TypeFlags.StringLike | ts.TypeFlags.NumberLike | ts.TypeFlags.BigIntLike | ts.TypeFlags.BooleanLike));
+      const hasPrimitive = resolvedMembers.some(
+        ({ resolved }) => resolved && resolved.flags & (ts.TypeFlags.StringLike | ts.TypeFlags.NumberLike | ts.TypeFlags.BigIntLike | ts.TypeFlags.BooleanLike),
+      );
       const members = resolvedMembers
         .filter(({ type, resolved }) => type.kind !== ts.SyntaxKind.UnknownKeyword && !(resolved && resolved.flags & ts.TypeFlags.Unknown))
         // A brand such as `string & { readonly __brand?: true }` only exists in TypeScript, so the schema is the primitive.

@@ -38,19 +38,31 @@ describe('Express Server With custom multer', () => {
 
     it('cannot post a file with wrong attribute name', () => {
       const formData = { wrongAttributeName: '@../package.json' };
-      return verifyFileUploadRequest(app, basePath + '/PostTest/File', formData, (_err, res) => {
-        expect(res.status).to.equal(500);
-        expect(res.body).to.include({ name: 'MulterError', status: 500 });
-        expect(res.body.message).to.match(/Unexpected .*field/);
-      }, 500);
+      return verifyFileUploadRequest(
+        app,
+        basePath + '/PostTest/File',
+        formData,
+        (_err, res) => {
+          expect(res.status).to.equal(500);
+          expect(res.body).to.include({ name: 'MulterError', status: 500 });
+          expect(res.body.message).to.match(/Unexpected .*field/);
+        },
+        500,
+      );
     });
 
     it('cannot post a file with no file', () => {
       const formData = { notAFileAttribute: 'not a file' };
-      return verifyFileUploadRequest(app, basePath + '/PostTest/File', formData, (_err, res) => {
-        expect(res.status).to.equal(400);
-        expect(res.text).to.equal('{"fields":{"someFile":{"message":"\'someFile\' is required"}},"message":"An error occurred during the request.","name":"ValidateError","status":400}');
-      }, 400);
+      return verifyFileUploadRequest(
+        app,
+        basePath + '/PostTest/File',
+        formData,
+        (_err, res) => {
+          expect(res.status).to.equal(400);
+          expect(res.text).to.equal('{"fields":{"someFile":{"message":"\'someFile\' is required"}},"message":"An error occurred during the request.","name":"ValidateError","status":400}');
+        },
+        400,
+      );
     });
 
     it('can post a file with no file', () => {
