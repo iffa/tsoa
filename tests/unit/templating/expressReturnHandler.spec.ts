@@ -2,6 +2,7 @@ import { Controller, ExpressTemplateService } from '@iffa/tsoa-runtime';
 import { expect } from 'chai';
 import express from 'express';
 import 'mocha';
+import { Readable } from 'node:stream';
 import request from 'supertest';
 
 describe('ExpressTemplateService response serialization', () => {
@@ -75,6 +76,26 @@ describe('ExpressTemplateService response serialization', () => {
   it('answers 204 for undefined, and for null without a JSON content type', async () => {
     expect((await serve(undefined)).status).to.equal(204);
     expect((await serve(null)).status).to.equal(204);
+  });
+
+  it('aborts the connection on a stream error after data was sent', async () => {
+    let started = false;
+    const stream = new Readable({
+      read() {
+        if (!started) {
+          started = true;
+          this.push('partial');
+          setTimeout(() => this.destroy(new Error('stream_test_error')), 20);
+        }
+      },
+    });
+
+    const error = await serve(stream).then(
+      () => undefined,
+      (failure: NodeJS.ErrnoException) => failure,
+    );
+
+    expect(error?.code).to.equal('ECONNRESET');
   });
 
   it('sends null as JSON when the controller set a JSON content type', async () => {

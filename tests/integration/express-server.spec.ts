@@ -293,15 +293,15 @@ describe('Express Server', () => {
     });
   });
 
-  it('aborts the request when a streamed response fails', () => {
-    // Without pipeline the stream's error event is unhandled and takes the process down.
-    return request(app)
-      .get(`${basePath}/GetTest/HandleStreamFailure`)
-      .then(() => undefined)
-      .catch((error: NodeJS.ErrnoException) => error)
-      .then(error => {
-        expect(error?.code).to.equal('ECONNRESET');
-      });
+  it('hands a stream error before any data to the error handler', () => {
+    return verifyGetRequest(
+      app,
+      `${basePath}/GetTest/HandleStreamFailure`,
+      (_err, res) => {
+        expect(res.body.message).to.equal('stream_test_error');
+      },
+      500,
+    );
   });
 
   describe('exclusive bounds', () => {

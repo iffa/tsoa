@@ -5,7 +5,7 @@ import { FieldErrors } from '../../templateHelpers';
 import { TsoaRoute } from '../../tsoa-route';
 import { ValidateError } from '../../templateHelpers';
 import { TemplateService } from '../templateService';
-import { Readable, pipeline } from 'node:stream';
+import { Readable, finished } from 'node:stream';
 
 type ExpressApiHandlerParameters = {
   methodName: string;
@@ -184,14 +184,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
 
     if (data && typeof data.pipe === 'function' && data.readable && typeof data._read === 'function') {
       response.status(statusCode || 200);
-      // pipeline, unlike pipe, destroys the response when the stream fails, so a failing
-      // stream aborts the request instead of raising an unhandled error event.
-      pipeline(data as Readable, response, error => {
-        // A client that hangs up mid-stream is not an application error.
-        if (error && error.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
-          next?.(error);
-        }
-      });
+      this.pipeStream(data as Readable, response, next);
     } else if (data === undefined || (data === null && !isJsonResponse)) {
       response.status(statusCode || 204).end();
     } else if (data instanceof Uint8Array) {
@@ -203,6 +196,24 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
       // The spec documents these as application/json. send() would emit a bare string as text/html.
       response.status(statusCode || 200).json(data);
     }
+  }
+
+  /**
+   * stream.pipeline destroys the response as soon as the source fails, which leaves the error
+   * handler nothing to answer with. An error before any data goes to next; after that the
+   * response is destroyed, so the client sees a truncated transfer.
+   */
+  private pipeStream(stream: Readable, response: ExResponse, next?: ExNext) {
+    stream.on('error', (error: Error) => {
+      stream.unpipe(response);
+      if (!response.headersSent && next) {
+        next(error);
+        return;
+      }
+      response.destroy();
+    });
+    finished(response, () => stream.destroy());
+    stream.pipe(response);
   }
 }
 import type {} from 'multer';
