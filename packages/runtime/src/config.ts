@@ -32,10 +32,10 @@ export interface Config {
   noImplicitAdditionalProperties?: 'throw-on-extras' | 'silently-remove-extras' | 'ignore';
 
   /**
-   * Typescript CompilerOptions to be used during generation
-   *
-   * @type {Record<string, unknown>}
-   * @memberof RoutesConfig
+   * Native TypeScript compiler options that override the nearest tsconfig.json.
+   * Use numeric enums and library filenames, such as ModuleKind.CommonJS and
+   * lib.es2022.d.ts. Put JSON-style values in tsconfig.json. Relative `paths` resolve
+   * from the working directory.
    */
   compilerOptions?: Record<string, unknown>;
 
