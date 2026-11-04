@@ -77,17 +77,9 @@ export function getParameterValidators(parameter: ts.ParameterDeclaration, param
             value,
           };
           break;
-        case 'pattern': {
-          const pattern = getPatternValueAndErrorMsg(comment);
-          if (typeof pattern.value !== 'string') {
-            throw new GenerateMetadataError(`${name} parameter use string.`);
-          }
-          validateObj[name] = {
-            errorMsg: pattern.errorMsg,
-            value: pattern.value,
-          };
+        case 'pattern':
+          validateObj[name] = parsePattern(comment, tag);
           break;
-        }
         default:
           if (name.startsWith('is')) {
             const errorMsg = getErrorMsg(comment, false);
@@ -180,17 +172,9 @@ export function getPropertyValidators(property: ts.Node): Tsoa.Validators | unde
             value,
           };
           break;
-        case 'pattern': {
-          const pattern = getPatternValueAndErrorMsg(commentToString(comment));
-          if (typeof pattern.value !== 'string') {
-            throw new GenerateMetadataError(`${name} parameter use string.`);
-          }
-          validateObj[name] = {
-            errorMsg: pattern.errorMsg,
-            value: pattern.value,
-          };
+        case 'pattern':
+          validateObj[name] = parsePattern(commentToString(comment), tag);
           break;
-        }
         case 'title':
           if (typeof value !== 'string') {
             throw new GenerateMetadataError(`${name} parameter use string.`);
@@ -218,39 +202,65 @@ export function getPropertyValidators(property: ts.Node): Tsoa.Validators | unde
   );
 }
 
-function removeSurroundingQuotes(str: string) {
-  if (str.startsWith('`') && str.endsWith('`')) {
-    return str.substring(1, str.length - 1);
+/**
+ * Splits a `@pattern` annotation into its regular expression and its optional error
+ * message, and rejects an expression JavaScript cannot compile. A plain annotation is split
+ * at the first space, so a pattern that matches a literal space has to be wrapped: in
+ * backticks or as a regular expression literal. See docs/patterns.md.
+ */
+function parsePattern(comment: string | undefined, tag: ts.Node): { errorMsg?: string; value: string } {
+  if (!comment) {
+    throw new GenerateMetadataError('pattern parameter use string.', tag);
   }
-  if (str.startsWith('```') && str.endsWith('```')) {
-    return str.substring(3, str.length - 3);
+
+  const pattern = splitPattern(comment.trim());
+  try {
+    new RegExp(pattern.value);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new GenerateMetadataError(`Invalid @pattern ${JSON.stringify(pattern.value)}. ${error.message}`, tag);
+    }
+    throw error;
   }
-  return str;
+  return pattern;
+}
+
+function splitPattern(annotation: string): { errorMsg?: string; value: string } {
+  const wrapped = annotation.startsWith('/') ? readRegExpLiteral(annotation) : readBacktickWrapper(annotation);
+  if (wrapped) {
+    return { errorMsg: annotation.substring(wrapped.length + 2).trim() || undefined, value: wrapped };
+  }
+
+  const [value, ...errorMsg] = annotation.split(' ');
+  return {
+    errorMsg: errorMsg.join(' ') || undefined,
+    value: value.startsWith('`') && value.endsWith('`') ? value.substring(1, value.length - 1) : value,
+  };
 }
 
 /**
- * Splits a `@pattern` annotation into its regular expression and its optional error
- * message. A plain annotation is split at the first space, so a pattern that matches a
- * literal space has to be written as a regular expression literal - `/^[a-z ]+$/` - which
- * is lexed here the way JavaScript lexes one: a `/` ends the literal unless it is escaped
- * or inside a character class.
+ * The body of a single backtick pair at the start of `text`, or undefined when there is none.
+ * The closing backtick is the first unescaped one followed by a space or the end of the
+ * comment, and the pair stays on one line.
  */
-function getPatternValueAndErrorMsg(comment?: string): { errorMsg?: string; value?: string } {
-  if (!comment) {
-    return { errorMsg: undefined, value: undefined };
+function readBacktickWrapper(text: string): string | undefined {
+  if (!text.startsWith('`') || text.startsWith('``')) {
+    return undefined;
   }
 
-  const trimmed = comment.trim();
-  const literal = trimmed.startsWith('/') ? readRegExpLiteral(trimmed) : undefined;
-  if (literal) {
-    return { errorMsg: trimmed.substring(literal.length + 2).trim() || undefined, value: literal };
+  let escaped = false;
+  for (let index = 1; index < text.length; index++) {
+    const character = text[index];
+    if (character === '\r' || character === '\n') {
+      return undefined;
+    }
+    if (character === '`' && !escaped && (index + 1 === text.length || text[index + 1] === ' ')) {
+      return text.substring(1, index);
+    }
+    escaped = character === '\\' && !escaped;
   }
 
-  const [value, ...errorMsg] = trimmed.split(' ');
-  return {
-    errorMsg: errorMsg.join(' ') || undefined,
-    value: removeSurroundingQuotes(value),
-  };
+  return undefined;
 }
 
 /**
