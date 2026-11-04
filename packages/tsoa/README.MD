@@ -6,7 +6,7 @@ Pronounced so·uh
 
 OpenAPI-compliant REST APIs using TypeScript and Node
 
-![build status](https://github.com/iffa/tsoa/actions/workflows/runTestsOnPush.yml/badge.svg)
+![build status](https://github.com/iffa/tsoa/actions/workflows/ci.yml/badge.svg)
 [![npm version](https://img.shields.io/npm/v/@iffa/tsoa/latest)](https://www.npmjs.com/package/@iffa/tsoa)
 
 </div>
