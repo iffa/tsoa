@@ -15,7 +15,11 @@ export class ControllerGenerator {
   private readonly commonResponses: Tsoa.Response[];
   private readonly produces?: string[];
 
-  constructor(private readonly node: ClassDeclaration, private readonly current: MetadataGenerator, private readonly parentSecurity: Tsoa.Security[] = []) {
+  constructor(
+    private readonly node: ClassDeclaration,
+    private readonly current: MetadataGenerator,
+    private readonly parentSecurity: Tsoa.Security[] = [],
+  ) {
     this.path = this.getPath();
     this.tags = this.getTags();
     this.security = this.getSecurity();

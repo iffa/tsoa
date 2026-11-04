@@ -56,6 +56,31 @@ describe('Validator JSDoc utilities', () => {
       });
     });
 
+    it('keeps literal spaces in a backtick wrapper', () => {
+      expect(patternOf('@pattern `^[a-z ]+$` letters and spaces only')).to.deep.equal({
+        errorMsg: 'letters and spaces only',
+        value: '^[a-z ]+$',
+      });
+    });
+
+    it('keeps an escaped backtick inside a backtick wrapper', () => {
+      expect(patternOf('@pattern `^a\\` b$` invalid value')).to.deep.equal({
+        errorMsg: 'invalid value',
+        value: '^a\\` b$',
+      });
+    });
+
+    it('falls back to the first space for an unclosed backtick wrapper', () => {
+      expect(patternOf('@pattern `^[a-z]+$ no closing backtick')).to.deep.equal({
+        errorMsg: 'no closing backtick',
+        value: '`^[a-z]+$',
+      });
+    });
+
+    it('rejects an expression JavaScript cannot compile', () => {
+      expect(() => patternOf('@pattern ^[a-z')).to.throw('Invalid @pattern "^[a-z"');
+    });
+
     it('treats a slash-prefixed pattern that is not a literal as a plain annotation', () => {
       expect(patternOf('@pattern /etc/passwd no config paths')).to.deep.equal({
         errorMsg: 'no config paths',

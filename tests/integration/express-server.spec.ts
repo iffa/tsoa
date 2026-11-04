@@ -293,15 +293,15 @@ describe('Express Server', () => {
     });
   });
 
-  it('aborts the request when a streamed response fails', () => {
-    // Without pipeline the stream's error event is unhandled and takes the process down.
-    return request(app)
-      .get(`${basePath}/GetTest/HandleStreamFailure`)
-      .then(() => undefined)
-      .catch((error: NodeJS.ErrnoException) => error)
-      .then(error => {
-        expect(error?.code).to.equal('ECONNRESET');
-      });
+  it('hands a stream error before any data to the error handler', () => {
+    return verifyGetRequest(
+      app,
+      `${basePath}/GetTest/HandleStreamFailure`,
+      (_err, res) => {
+        expect(res.body.message).to.equal('stream_test_error');
+      },
+      500,
+    );
   });
 
   describe('exclusive bounds', () => {
@@ -1693,7 +1693,8 @@ describe('Express Server', () => {
       const mainResourceId = 'main-123';
 
       return verifyGetRequest(app, basePath + `/SubResourceTest/${mainResourceId}/SubResource`, (_err, res) => {
-        expect(res.text).to.equal(mainResourceId);
+        expect(res.type).to.equal('application/json');
+        expect(res.body).to.equal(mainResourceId);
       });
     });
 
@@ -1702,7 +1703,8 @@ describe('Express Server', () => {
       const subResourceId = 'sub-456';
 
       return verifyGetRequest(app, basePath + `/SubResourceTest/${mainResourceId}/SubResource/${subResourceId}`, (_err, res) => {
-        expect(res.text).to.equal(`${mainResourceId}:${subResourceId}`);
+        expect(res.type).to.equal('application/json');
+        expect(res.body).to.equal(`${mainResourceId}:${subResourceId}`);
       });
     });
   });
@@ -1734,26 +1736,39 @@ describe('Express Server', () => {
 
     it('cannot post a file with wrong attribute name', () => {
       const formData = { wrongAttributeName: '@../package.json' };
-      return verifyFileUploadRequest(app, basePath + '/PostTest/File', formData, (_err, res) => {
-        expect(res.status).to.equal(500);
-        expect(res.body).to.include({ name: 'MulterError', status: 500 });
-        expect(res.body.message).to.match(/Unexpected .*field/);
-      }, 500);
+      return verifyFileUploadRequest(
+        app,
+        basePath + '/PostTest/File',
+        formData,
+        (_err, res) => {
+          expect(res.status).to.equal(500);
+          expect(res.body).to.include({ name: 'MulterError', status: 500 });
+          expect(res.body.message).to.match(/Unexpected .*field/);
+        },
+        500,
+      );
     });
 
     it('cannot post a file with no file', () => {
       const formData = { notAFileAttribute: 'not a file' };
-      return verifyFileUploadRequest(app, basePath + '/PostTest/File', formData, (_err, res) => {
-        expect(res.status).to.equal(400);
-        expect(res.text).to.equal('{"fields":{"someFile":{"message":"\'someFile\' is required"}},"message":"An error occurred during the request.","name":"ValidateError","status":400}');
-      }, 400);
+      return verifyFileUploadRequest(
+        app,
+        basePath + '/PostTest/File',
+        formData,
+        (_err, res) => {
+          expect(res.status).to.equal(400);
+          expect(res.text).to.equal('{"fields":{"someFile":{"message":"\'someFile\' is required"}},"message":"An error occurred during the request.","name":"ValidateError","status":400}');
+        },
+        400,
+      );
     });
 
     it('can post a file with no file', () => {
       const formData = { notAFileAttribute: 'not a file' };
       return verifyFileUploadRequest(app, basePath + '/PostTest/FileOptional', formData, (_err, res) => {
         expect(res.status).to.equal(200);
-        expect(res.text).to.equal('no file');
+        expect(res.type).to.equal('application/json');
+        expect(res.body).to.equal('no file');
       });
     });
 

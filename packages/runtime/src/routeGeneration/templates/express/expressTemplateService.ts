@@ -5,7 +5,7 @@ import { FieldErrors } from '../../templateHelpers';
 import { TsoaRoute } from '../../tsoa-route';
 import { ValidateError } from '../../templateHelpers';
 import { TemplateService } from '../templateService';
-import { Readable, pipeline } from 'node:stream';
+import { Readable, finished } from 'node:stream';
 
 type ExpressApiHandlerParameters = {
   methodName: string;
@@ -179,33 +179,41 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
       response.set(name, headers[name]);
     });
 
-    // Check if the response is marked to be JSON
-    const isJsonResponse = response.get('Content-Type')?.includes('json') || false;
+    const contentType = response.get('Content-Type');
+    const isJsonResponse = contentType?.includes('json') ?? false;
 
     if (data && typeof data.pipe === 'function' && data.readable && typeof data._read === 'function') {
       response.status(statusCode || 200);
-      // pipeline, unlike pipe, destroys the response when the stream fails, so a failing
-      // stream aborts the request instead of raising an unhandled error event.
-      pipeline(data as Readable, response, error => {
-        // A client that hangs up mid-stream is not an application error.
-        if (error && error.code !== 'ERR_STREAM_PREMATURE_CLOSE') {
-          next?.(error);
-        }
-      });
-    } else if (data !== undefined && (data !== null || isJsonResponse)) {
-      // allow null response when it is a json response
-      if (typeof data === 'number' || isJsonResponse) {
-        // express treats number data as status code so use the json method instead
-        // or if the response was marked as json then use the json so for example strings are quoted
-        response.status(statusCode || 200).json(data);
-      } else {
-        // do not use json for every type since internally the send will invoke json if needed
-        // but for string data it will not quote it, so we can send string as plain/text data
-        response.status(statusCode || 200).send(data);
-      }
-    } else {
+      this.pipeStream(data as Readable, response, next);
+    } else if (data === undefined || (data === null && !isJsonResponse)) {
       response.status(statusCode || 204).end();
+    } else if (data instanceof Uint8Array) {
+      // send() only recognises Buffer as binary and would JSON-encode any other Uint8Array
+      response.status(statusCode || 200).send(Buffer.isBuffer(data) ? data : Buffer.from(data.buffer, data.byteOffset, data.byteLength));
+    } else if (typeof data === 'string' && contentType !== undefined && !isJsonResponse) {
+      response.status(statusCode || 200).send(data);
+    } else {
+      // The spec documents these as application/json. send() would emit a bare string as text/html.
+      response.status(statusCode || 200).json(data);
     }
+  }
+
+  /**
+   * stream.pipeline destroys the response as soon as the source fails, which leaves the error
+   * handler nothing to answer with. An error before any data goes to next; after that the
+   * response is destroyed, so the client sees a truncated transfer.
+   */
+  private pipeStream(stream: Readable, response: ExResponse, next?: ExNext) {
+    stream.on('error', (error: Error) => {
+      stream.unpipe(response);
+      if (!response.headersSent && next) {
+        next(error);
+        return;
+      }
+      response.destroy();
+    });
+    finished(response, () => stream.destroy());
+    stream.pipe(response);
   }
 }
 import type {} from 'multer';

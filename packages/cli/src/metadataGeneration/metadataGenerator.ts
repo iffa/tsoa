@@ -10,6 +10,9 @@ import { GenerateMetadataError } from './exceptions';
 import { TypeResolver } from './typeResolver';
 import { routePath, routeSignature } from '../utils/routePaths';
 
+const NO_INPUTS_FOUND = 18003;
+const EMPTY_FILES_LIST = 18002;
+
 export class MetadataGenerator {
   public readonly controllerNodes = new Array<ClassDeclaration>();
   public readonly typeChecker: TypeChecker;
@@ -47,11 +50,13 @@ export class MetadataGenerator {
     if (configFile.error) {
       throw new GenerateMetadataError(ts.flattenDiagnosticMessageText(configFile.error.messageText, '\n'));
     }
-    const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(tsconfigPath));
-    if (parsed.errors.length) {
-      throw new GenerateMetadataError(`Invalid tsconfig '${tsconfigPath}':\n${parsed.errors.map(error => ts.flattenDiagnosticMessageText(error.messageText, '\n')).join('\n')}`);
+    const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, path.dirname(tsconfigPath), undefined, tsconfigPath);
+    // tsoa picks its own root files, so a config without inputs still supplies valid options.
+    const errors = parsed.errors.filter(error => error.code !== NO_INPUTS_FOUND && error.code !== EMPTY_FILES_LIST);
+    if (errors.length) {
+      throw new GenerateMetadataError(`Invalid tsconfig '${tsconfigPath}':\n${errors.map(error => ts.flattenDiagnosticMessageText(error.messageText, '\n')).join('\n')}`);
     }
-    return { ...parsed.options, ...(overrides || {}) };
+    return { ...parsed.options, ...(overrides?.paths && { pathsBasePath: process.cwd() }), ...overrides };
   }
 
   public Generate(): Tsoa.Metadata {

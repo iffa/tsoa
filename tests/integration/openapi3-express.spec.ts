@@ -368,51 +368,51 @@ describe('OpenAPI3 Express Server', () => {
     );
   });
 
-    describe('BodyProp', () => {
-      it('should valid body props validate', () => {
-        return verifyPostRequest(
-          app,
-          basePath + `/Validate/body-prop`,
-          { 'name': 'Nick Yang' },
-          (_err, res) => {
-            const { body } = res;
+  describe('BodyProp', () => {
+    it('should valid body props validate', () => {
+      return verifyPostRequest(
+        app,
+        basePath + `/Validate/body-prop`,
+        { name: 'Nick Yang' },
+        (_err, res) => {
+          const { body } = res;
 
-            expect(body.name).to.equal("Nick Yang-validated");
-          },
-          200,
-        )
-      });
-
-      it('should invalid body props missing required field', () => {
-        return verifyPostRequest(
-          app,
-          basePath + `/Validate/body-prop`,
-          { 'incorrect-field': 'incorrect' },
-          (err, _res) => {
-            const body = JSON.parse(err.text);
-
-            expect(body.fields['body.name'].message).to.equal("'name' is required");
-            expect(body.fields['body.name'].value).to.be.undefined;
-          },
-          400,
-        )
-      });
-
-      it('should invalid body props incorrect type', () => {
-        return verifyPostRequest(
-          app,
-          basePath + `/Validate/body-prop`,
-          { 'name': 1234 },
-          (err, _res) => {
-            const body = JSON.parse(err.text);
-
-            expect(body.fields['body.name'].message).to.equal("invalid string value");
-            expect(body.fields['body.name'].value).to.be.undefined;
-          },
-          400,
-        )
-      });
+          expect(body.name).to.equal('Nick Yang-validated');
+        },
+        200,
+      );
     });
+
+    it('should invalid body props missing required field', () => {
+      return verifyPostRequest(
+        app,
+        basePath + `/Validate/body-prop`,
+        { 'incorrect-field': 'incorrect' },
+        (err, _res) => {
+          const body = JSON.parse(err.text);
+
+          expect(body.fields['body.name'].message).to.equal("'name' is required");
+          expect(body.fields['body.name'].value).to.be.undefined;
+        },
+        400,
+      );
+    });
+
+    it('should invalid body props incorrect type', () => {
+      return verifyPostRequest(
+        app,
+        basePath + `/Validate/body-prop`,
+        { name: 1234 },
+        (err, _res) => {
+          const body = JSON.parse(err.text);
+
+          expect(body.fields['body.name'].message).to.equal('invalid string value');
+          expect(body.fields['body.name'].value).to.be.undefined;
+        },
+        400,
+      );
+    });
+  });
 
   describe('@Res', () => {
     it('Should return on @Res', () => {
