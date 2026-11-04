@@ -1693,7 +1693,8 @@ describe('Express Server', () => {
       const mainResourceId = 'main-123';
 
       return verifyGetRequest(app, basePath + `/SubResourceTest/${mainResourceId}/SubResource`, (_err, res) => {
-        expect(res.text).to.equal(mainResourceId);
+        expect(res.type).to.equal('application/json');
+        expect(res.body).to.equal(mainResourceId);
       });
     });
 
@@ -1702,7 +1703,8 @@ describe('Express Server', () => {
       const subResourceId = 'sub-456';
 
       return verifyGetRequest(app, basePath + `/SubResourceTest/${mainResourceId}/SubResource/${subResourceId}`, (_err, res) => {
-        expect(res.text).to.equal(`${mainResourceId}:${subResourceId}`);
+        expect(res.type).to.equal('application/json');
+        expect(res.body).to.equal(`${mainResourceId}:${subResourceId}`);
       });
     });
   });
@@ -1765,7 +1767,8 @@ describe('Express Server', () => {
       const formData = { notAFileAttribute: 'not a file' };
       return verifyFileUploadRequest(app, basePath + '/PostTest/FileOptional', formData, (_err, res) => {
         expect(res.status).to.equal(200);
-        expect(res.text).to.equal('no file');
+        expect(res.type).to.equal('application/json');
+        expect(res.body).to.equal('no file');
       });
     });
 
