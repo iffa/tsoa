@@ -707,6 +707,63 @@ describe('Express Server', () => {
     });
   });
 
+  describe('Readable request body', () => {
+    const payload = Buffer.alloc(64 * 1024, 'a');
+
+    it('hands the request stream to the controller', () => {
+      return verifyRequest(
+        app,
+        (_err, res) => {
+          expect(res.body).to.deep.eq({ length: payload.length });
+        },
+        request =>
+          request
+            .post(basePath + '/MediaTypeTest/Binary')
+            .set('Content-Type', 'application/octet-stream')
+            .send(payload),
+        200,
+      );
+    });
+
+    it('hands over a body with a custom media type', () => {
+      return verifyRequest(
+        app,
+        (_err, res) => {
+          expect(res.body).to.deep.eq({ length: payload.length });
+        },
+        request =>
+          request
+            .post(basePath + '/MediaTypeTest/Binary/Custom')
+            .set('Content-Type', 'image/png')
+            .send(payload),
+        200,
+      );
+    });
+
+    it('hands over an empty stream for an empty body', () => {
+      return verifyRequest(
+        app,
+        (_err, res) => {
+          expect(res.body).to.deep.eq({ length: 0 });
+        },
+        request => request.post(basePath + '/MediaTypeTest/Binary').set('Content-Type', 'application/octet-stream'),
+        200,
+      );
+    });
+
+    it('rejects a body that a body parser already read, along with other invalid parameters', () => {
+      return verifyRequest(
+        app,
+        (_err, res) => {
+          expect(res.body.name).to.eq('ValidateError');
+          expect(res.body.fields).to.have.all.keys('body', 'tag');
+        },
+        request => request.post(basePath + '/MediaTypeTest/Binary/Query?tag=abc').send({ name: 'foo' }),
+        400,
+      );
+    });
+  });
+
   describe('Custom Content-Type', () => {
     it('should return custom content-type if given', () => {
       return verifyPostRequest(

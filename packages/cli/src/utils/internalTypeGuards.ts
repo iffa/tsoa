@@ -62,3 +62,7 @@ export function isRefType(metaType: Tsoa.Type): metaType is Tsoa.ReferenceType {
     }
   }
 }
+
+export function hasBinaryBody(parameters: Tsoa.Parameter[]): boolean {
+  return parameters.some(parameter => parameter.in === 'body' && parameter.type.dataType === 'binary');
+}

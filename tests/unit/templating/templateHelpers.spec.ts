@@ -753,8 +753,7 @@ describe('Request validation boundaries', () => {
     expect(service.ValidateParam(schema, { type: 'user', id: '123' }, 'body', errors, true)).to.deep.equal({ type: 'user', id: '123' });
     expect(errors).to.deep.equal({});
     service.ValidateParam(schema, { type: 'user' }, 'body', errors, true);
-    expect(errors.body.message).to.include("'id' is required");
-    expect(errors.body.message).not.to.include("'name' is required");
+    expect(errors).to.deep.equal({ 'body.id': { message: "'id' is required", value: undefined } });
   });
 
   it('reports every invalid nested array element under its full path', () => {

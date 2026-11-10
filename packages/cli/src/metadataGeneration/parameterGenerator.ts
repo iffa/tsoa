@@ -198,7 +198,7 @@ export class ParameterGenerator {
 
   private getBodyParameter(parameter: ts.ParameterDeclaration): Tsoa.Parameter {
     const parameterName = (parameter.name as ts.Identifier).text;
-    const type = this.getValidatedType(parameter);
+    const type: Tsoa.Type = this.isReadableStream(parameter) ? { dataType: 'binary' } : this.getValidatedType(parameter);
 
     if (!this.supportBodyMethod(this.method)) {
       throw new GenerateMetadataError(`@Body('${parameterName}') Can't support in ${this.method.toUpperCase()} method.`);
@@ -571,6 +571,15 @@ export class ParameterGenerator {
     }
 
     return false;
+  }
+
+  /** Whether the parameter is typed as Node's `stream.Readable`, under any name. */
+  private isReadableStream(parameter: ts.ParameterDeclaration): boolean {
+    if (!parameter.type) {
+      return false;
+    }
+    const symbol = this.current.typeChecker.getTypeFromTypeNode(parameter.type).getSymbol();
+    return symbol?.name === 'Readable' && !!symbol.declarations?.some(declaration => /[\\/]@types[\\/]node[\\/]stream\.d\.ts$/.test(declaration.getSourceFile().fileName));
   }
 
   private getValidatedType(parameter: ts.ParameterDeclaration) {

@@ -1,6 +1,11 @@
 /**
  * Inject http Body
  *  @param {string} [name] properties name in body object
+ *
+ * A parameter typed as `Readable` from `stream` receives the request stream, without parsing or validation.
+ * Its media type defaults to `application/octet-stream`. Use `@Consumes` to set another.
+ * A body that a body parser already read fails with a field error under the parameter's name. That includes
+ * an empty request whose content type matches an installed parser. There is no size limit.
  */
 export function Body(): ParameterDecorator {
   return () => {
@@ -127,6 +132,7 @@ export function FormField(name?: string): ParameterDecorator {
  * Overrides the default media type of request body.
  * Can be used on specific method.
  * Can't be used on controller level.
+ * The default is `application/json`, or `application/octet-stream` for a `Readable` body.
  *
  * @link https://swagger.io/docs/specification/describing-request-body/
  */

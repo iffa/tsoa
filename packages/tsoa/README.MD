@@ -36,7 +36,7 @@ This is a fork of [lukeautry/tsoa](https://github.com/lukeautry/tsoa), published
 
 Generated routes use Express 5 and ESM imports. OpenAPI defaults to 3.0. Set `specVersion: 3.1` for tuple types, which 3.0 can't describe. 3.1 output writes null as a type (`type: ['string', 'null']`) instead of `nullable`.
 Packages require Node 24.11 or newer and use the TypeScript 6 compiler API. TypeScript 5 and earlier are unsupported.
-JSON bodies must match their declared types. Query, path, and multipart fields are parsed from text.
+JSON bodies must match their declared types. Query, path, and multipart fields are parsed from text. A `@Body()` typed as `Readable` from `stream` gets the request stream unparsed, as `application/octet-stream` unless `@Consumes` says otherwise.
 Undeclared properties are removed, and generated files are written only when their content changes.
 Literal routes register before parameter routes across controllers. Equivalent route registrations fail with both source locations.
 
@@ -44,6 +44,18 @@ Literal routes register before parameter routes across controllers. Equivalent r
 Packages are built with tsdown as ESM with bundled declarations and source maps.
 
 Routes that accept file uploads import `multer`. Install `multer` and `@types/multer` in your project. To change multer's options, pass your own instance: `RegisterRoutes(app, { multer: multer({ dest: '/tmp' }) })`. The default instance limits each file to 8 MB.
+
+## Express setup
+
+Express 5 parses queries with its simple parser, which reads `?ids[]=1` as a key named `ids[]`. For bracket syntax in queries and nested form fields:
+
+```ts
+app.set('query parser', 'extended'); // ?filter[a]=x and ?ids[]=1
+app.use(express.urlencoded({ extended: true })); // a[b]=1
+```
+
+- With `express.json()`, a request without a body leaves `req.body` undefined, and a required `@Body()` fails with `'body' is required`.
+- Express 5 reserves `()[]?+!` in route paths and requires a name for each `*` wildcard. A decorator path that breaks these rules fails when the routes register. See the [Express 5 migration guide](https://expressjs.com/en/guide/migrating-5.html#path-route-matching-syntax).
 
 ## Getting Started
 
