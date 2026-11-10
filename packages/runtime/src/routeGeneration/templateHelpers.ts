@@ -3,6 +3,7 @@ import isISO8601 from 'validator/lib/isISO8601.js';
 import matches from 'validator/lib/matches.js';
 import { assertNever } from '../utils/assertNever';
 import { AdditionalProps } from './additionalProps';
+import { RefRecursionGuard } from './refRecursionGuard';
 import { TsoaRoute, isDefaultForAdditionalPropertiesAllowed } from './tsoa-route';
 import { Tsoa } from '../metadataGeneration/tsoa';
 import ValidatorKey = Tsoa.ValidatorKey;
@@ -153,6 +154,14 @@ function schemaReachesRef(models: TsoaRoute.Models, schema: TsoaRoute.PropertySc
 
 const PROTOTYPE_KEY = '__proto__';
 
+function isBufferJson(value: unknown): value is { type: 'Buffer'; data: unknown } {
+  return typeof value === 'object' && value !== null && 'type' in value && value.type === 'Buffer' && 'data' in value;
+}
+
+function isByteArray(value: unknown): value is number[] {
+  return Array.isArray(value) && value.every(byte => Number.isInteger(byte) && byte >= 0 && byte <= 255);
+}
+
 // Same identity semantics as an indexOf scan: NaN never matches, objects compare by reference.
 function hasDuplicateItems(items: unknown[]): boolean {
   const seen = new Set<unknown>();
@@ -169,12 +178,12 @@ function hasDuplicateItems(items: unknown[]): boolean {
 }
 
 export class ValidationService {
-  private validationStack: Set<string> = new Set();
   private readonly unionDiscriminators = new WeakMap<TsoaRoute.PropertySchema, { name: string; members: Map<unknown, TsoaRoute.PropertySchema> } | null>();
 
   constructor(
     private readonly models: TsoaRoute.Models,
     private readonly config: AdditionalProps,
+    private readonly refRecursionGuard = new RefRecursionGuard(),
   ) {}
 
   public ValidateParam(property: TsoaRoute.PropertySchema, rawValue: any, name = '', fieldErrors: FieldErrors, isBodyParam: boolean, parent = '') {
@@ -250,17 +259,15 @@ export class ValidationService {
             return this.validateModel({ name, value, modelDefinition, fieldErrors, isBodyParam, parent });
           }
 
-          // Detect circular references to prevent stack overflow
-          const refPath = `${parent}${name}:${property.ref}`;
-          if (this.validationStack.has(refPath)) {
-            return value;
+          if (!this.refRecursionGuard.enter(value, property.ref)) {
+            fieldErrors[parent + name] = { message: `circular reference to '${property.ref}' cannot be validated` };
+            return;
           }
 
-          this.validationStack.add(refPath);
           try {
             return this.validateModel({ name, value, modelDefinition, fieldErrors, isBodyParam, parent });
           } finally {
-            this.validationStack.delete(refPath);
+            this.refRecursionGuard.leave(value, property.ref);
           }
         }
         return value;
@@ -329,7 +336,8 @@ export class ValidationService {
     }
 
     if (typeof additionalProperties === 'object' && typeof value === 'object') {
-      const keys = Object.keys(value).filter(key => typeof nestedProperties[key] === 'undefined' && key !== PROTOTYPE_KEY);
+      // An own "__proto__" key was already rejected above, unless extras are ignored. Then it is validated like any other key.
+      const keys = Object.keys(value).filter(key => !Object.hasOwn(nestedProperties, key) && (key !== PROTOTYPE_KEY || propHandling === 'ignore'));
       keys.forEach(key => {
         const validatedProp = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, childPath);
         // Add value from validator if it's not undefined or if value is required and unfedined is valid type
@@ -671,8 +679,10 @@ export class ValidationService {
     if (typeof value === 'string' || Buffer.isBuffer(value)) {
       return Buffer.from(value);
     }
-    if (Array.isArray(value) && value.every(byte => Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
-      return Buffer.from(value);
+    // Buffer#toJSON produces { type: 'Buffer', data: [...] }
+    const bytes = isBufferJson(value) ? value.data : value;
+    if (isByteArray(bytes)) {
+      return Buffer.from(bytes);
     }
     fieldErrors[parent + name] = {
       message: 'invalid buffer value',
@@ -712,7 +722,7 @@ export class ValidationService {
 
       // Clean value if it's not undefined or use undefined directly if it's undefined.
       // Value can be undefined if undefined is allowed datatype of the union
-      const validateableValue = value !== undefined ? this.deepClone(value) : value;
+      const validateableValue = value !== undefined ? this.cloneForBranch(value) : value;
       const cleanValue = this.ValidateParam(memberSchema, validateableValue, name, subFieldError, isBodyParam, parent);
       subFieldErrors.push(subFieldError);
 
@@ -863,7 +873,7 @@ export class ValidationService {
       const subFieldError: FieldErrors = {};
       const cleanValue = this.createChildValidationService({
         noImplicitAdditionalProperties: 'silently-remove-extras',
-      }).ValidateParam(subSchema, this.deepClone(value), name, subFieldError, isBodyParam, parent);
+      }).ValidateParam(subSchema, this.cloneForBranch(value), name, subFieldError, isBodyParam, parent);
       cleanValues = {
         ...cleanValues,
         ...cleanValue,
@@ -886,7 +896,7 @@ export class ValidationService {
         noImplicitAdditionalProperties: 'ignore',
       }).validateModel({
         name,
-        value: this.deepClone(value),
+        value: this.cloneForBranch(value),
         modelDefinition: schema,
         fieldErrors: requiredPropError,
         isBodyParam,
@@ -1094,7 +1104,7 @@ export class ValidationService {
         }
       } else {
         Object.keys(value).forEach((key: string) => {
-          if (isAnExcessProperty(key) && key !== PROTOTYPE_KEY) {
+          if (isAnExcessProperty(key) && (key !== PROTOTYPE_KEY || propHandling === 'ignore')) {
             const validatedValue = this.ValidateParam(additionalProperties, value[key], key, fieldErrors, isBodyParam, childPath);
             // Add value from validator if it's not undefined or if value is required and unfedined is valid type
             if (validatedValue !== undefined || (additionalProperties.dataType === 'undefined' && additionalProperties.required)) {
@@ -1123,10 +1133,14 @@ export class ValidationService {
    * @returns New ValidationService instance
    */
   private createChildValidationService(overrides: Partial<AdditionalProps> = {}): ValidationService {
-    return new ValidationService(this.models, {
-      ...this.config,
-      ...overrides,
-    });
+    return new ValidationService(this.models, { ...this.config, ...overrides }, this.refRecursionGuard);
+  }
+
+  /** Clones a value for a union or intersection branch, so the recursion guard still recognizes the value it copies. */
+  private cloneForBranch<T>(value: T): T {
+    const clone = this.deepClone(value);
+    this.refRecursionGuard.registerBranchClone(clone, value);
+    return clone;
   }
 
   /**

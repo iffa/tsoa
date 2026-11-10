@@ -1917,7 +1917,7 @@ describe('ValidationService', () => {
   });
 
   describe('Circular reference handling', () => {
-    it('should handle self-referencing refAlias without stack overflow', () => {
+    it('should report a self-referencing refAlias instead of overflowing the stack', () => {
       const models: TsoaRoute.Models = {
         RecursiveType: {
           dataType: 'refAlias',
@@ -1931,17 +1931,83 @@ describe('ValidationService', () => {
       });
 
       const fieldErrors: FieldErrors = {};
-      const value = { some: 'data' };
 
       const result = v.validateModel({
         name: '',
-        value,
+        value: { some: 'data' },
         modelDefinition: models.RecursiveType,
         fieldErrors,
         isBodyParam: true,
       });
 
-      expect(result).to.deep.equal(value);
+      expect(result).to.be.undefined;
+      expect(fieldErrors).to.deep.equal({ '': { message: `circular reference to 'RecursiveType' cannot be validated` } });
+    });
+
+    it('should reject a value matching no branch of a union that recurses through a coerced array', () => {
+      const models: TsoaRoute.Models = {
+        Tree: {
+          dataType: 'refAlias',
+          type: { dataType: 'union', subSchemas: [{ dataType: 'string' }, { dataType: 'array', array: { ref: 'Tree' } }] },
+        },
+      };
+      const fieldErrors: FieldErrors = {};
+
+      const result = new ValidationService(models, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true }).ValidateParam(
+        { ref: 'Tree', required: true },
+        { unexpected: true },
+        'body',
+        fieldErrors,
+        true,
+      );
+
+      expect(result).to.be.undefined;
+      expect(fieldErrors).to.have.all.keys('body');
+    });
+
+    it('should report a schema loop through an intersection instead of overflowing the stack', () => {
+      const models: TsoaRoute.Models = {
+        Loop: {
+          dataType: 'refAlias',
+          type: { dataType: 'intersection', subSchemas: [{ ref: 'Loop' }, { dataType: 'nestedObjectLiteral', nestedProperties: {} }] },
+        },
+      };
+      const fieldErrors: FieldErrors = {};
+
+      const result = new ValidationService(models, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: true }).ValidateParam(
+        { ref: 'Loop', required: true },
+        { a: 1 },
+        'body',
+        fieldErrors,
+        true,
+      );
+
+      expect(result).to.be.undefined;
+      expect(JSON.stringify(fieldErrors)).to.include(`circular reference to 'Loop' cannot be validated`);
+    });
+
+    it('should report a value that contains itself', () => {
+      const models: TsoaRoute.Models = {
+        Category: {
+          dataType: 'refObject',
+          properties: { children: { dataType: 'array', array: { ref: 'Category' }, required: true } },
+          additionalProperties: false,
+        },
+      };
+      const value: { children: unknown[] } = { children: [] };
+      value.children.push(value);
+      const fieldErrors: FieldErrors = {};
+
+      const result = new ValidationService(models, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: false }).ValidateParam(
+        { ref: 'Category', required: true },
+        value,
+        'body',
+        fieldErrors,
+        true,
+      );
+
+      expect(result).to.be.undefined;
+      expect(fieldErrors['body.children.$0'].message).to.equal(`circular reference to 'Category' cannot be validated`);
     });
 
     it('should handle deeply nested circular references', () => {
@@ -2291,6 +2357,20 @@ describe('ValidationService', () => {
       expect(result.isAdmin).to.be.undefined;
     });
 
+    it('should validate its value against the additional properties when additional properties are ignored', () => {
+      const v = new ValidationService(models, { noImplicitAdditionalProperties: 'ignore', bodyCoercion: false });
+      const modelErrors: FieldErrors = {};
+      const literalErrors: FieldErrors = {};
+
+      const model = v.validateModel({ name: 'body', value: JSON.parse('{"a":"b","__proto__":{"isAdmin":true}}'), modelDefinition: models.StringRecord, fieldErrors: modelErrors, isBodyParam: true });
+      const literal = v.validateNestedObjectLiteral('body', JSON.parse('{"__proto__":{"isAdmin":true}}'), literalErrors, true, {}, { dataType: 'string' }, '');
+
+      expect(model).to.be.undefined;
+      expect(modelErrors['body.__proto__'].message).to.equal('No matching model found in additionalProperties to validate __proto__');
+      expect(literal).to.be.undefined;
+      expect(literalErrors['body.__proto__'].message).to.equal('invalid string value');
+    });
+
     it('should keep other additional properties untouched', () => {
       const errors: FieldErrors = {};
 
@@ -2308,12 +2388,15 @@ describe('ValidationService', () => {
       expect(v.validateBuffer('b', 'text', {})?.toString()).to.equal('text');
       expect(v.validateBuffer('b', Buffer.from('raw'), {})?.toString()).to.equal('raw');
       expect(v.validateBuffer('b', [104, 105], {})?.toString()).to.equal('hi');
+      expect(v.validateBuffer('b', Buffer.from('hi').toJSON(), {})?.toString()).to.equal('hi');
     });
 
     for (const [label, value] of [
       ['an object with a length', { length: 1e9 }],
       ['a number', 5],
       ['an array holding a non-byte', [256]],
+      ['the JSON form of a buffer holding a non-byte', { type: 'Buffer', data: [256] }],
+      ['the JSON form of a buffer holding an object with a length', { type: 'Buffer', data: { length: 1e9 } }],
     ] as const) {
       it(`should report ${label} as a field error`, () => {
         const errors: FieldErrors = {};
