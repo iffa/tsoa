@@ -228,6 +228,11 @@ export namespace Swagger {
     links?: { [name: string]: unknown }; // If needed per spec
   }
 
+  export interface Discriminator {
+    propertyName: string;
+    mapping?: Record<string, string>;
+  }
+
   export interface BaseSchema<P = unknown> {
     type?: string;
     format?: DataFormat;
@@ -259,7 +264,7 @@ export namespace Swagger {
     // moved from Schema
     additionalProperties?: boolean | BaseSchema;
     properties?: { [propertyName: string]: P };
-    discriminator?: string;
+    discriminator?: Discriminator;
     readOnly?: boolean;
     xml?: XML;
     externalDocs?: ExternalDocs;
@@ -272,7 +277,7 @@ export namespace Swagger {
 
   export type DataType31 = DataType | 'null';
 
-  export interface Schema31 extends Omit<Schema3, 'type' | 'nullable' | 'items' | 'properties' | 'additionalProperties' | 'discriminator' | 'anyOf' | 'allOf' | 'not' | 'exclusiveMinimum' | 'exclusiveMaximum'> {
+  export interface Schema31 extends Omit<Schema3, 'type' | 'nullable' | 'items' | 'properties' | 'additionalProperties' | 'anyOf' | 'allOf' | 'not' | 'exclusiveMinimum' | 'exclusiveMaximum'> {
     type?: DataType31 | DataType31[];
     /** 3.1 writes null as a type. */
     nullable?: never;
@@ -292,11 +297,6 @@ export namespace Swagger {
     oneOf?: Schema31[];
     not?: Schema31;
     propertyNames?: Schema31;
-
-    discriminator?: {
-      propertyName: string;
-      mapping?: Record<string, string>;
-    };
   }
 
   export interface Schema3 extends Omit<BaseSchema, 'type'> {
