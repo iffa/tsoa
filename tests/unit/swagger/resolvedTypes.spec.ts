@@ -42,7 +42,7 @@ describe('Resolved request contracts', () => {
 
     const invalid: FieldErrors = {};
     service.ValidateParam({ ref: 'ResolvedPayload' }, { ...validPayload, state: 'new', actor: { type: 'company', companyId: '123' } }, 'body', invalid, true);
-    expect(invalid).to.have.keys('body.state', 'body.actor');
+    expect(invalid).to.have.keys('body.state', 'body.actor.type');
   });
 
   it('unwraps query aliases and preserves property validators', () => {

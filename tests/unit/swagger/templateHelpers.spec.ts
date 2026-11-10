@@ -1471,6 +1471,71 @@ describe('ValidationService', () => {
     });
   });
 
+  describe('Union with a tag property', () => {
+    const tagged = (tags: string[], fields: Record<string, TsoaRoute.PropertySchema>): TsoaRoute.ModelSchema => ({
+      dataType: 'refObject',
+      properties: { type: { dataType: 'enum', enums: tags, required: true }, ...fields },
+      additionalProperties: false,
+    });
+    const models: TsoaRoute.Models = {
+      TypeA: tagged(['A'], { a: { dataType: 'double', required: true } }),
+      TypeB: tagged(['B', 'b'], { b: { dataType: 'string', required: true } }),
+      TypeC: tagged(['constructor'], {}),
+      TypeOne: tagged(['1'], {}),
+      TypeD: {
+        dataType: 'refAlias',
+        type: { dataType: 'nestedObjectLiteral', nestedProperties: { type: { dataType: 'enum', enums: ['D'], required: true } }, additionalProperties: false },
+      },
+    };
+    const union = (...refs: string[]): TsoaRoute.PropertySchema => ({ dataType: 'union', subSchemas: refs.map(ref => ({ ref })) });
+    const validate = (value: unknown, schema = union('TypeA', 'TypeB', 'TypeC', 'TypeD'), bodyCoercion = false) => {
+      const fieldErrors: FieldErrors = {};
+      const result = new ValidationService(models, { noImplicitAdditionalProperties: 'throw-on-extras', bodyCoercion }).validateUnion('field', value, fieldErrors, true, schema, 'body.');
+      return { result, fieldErrors };
+    };
+
+    it('selects the member by its tag, by any of its tags, and by a tag named like an Object.prototype member', () => {
+      expect(validate({ type: 'A', a: 1 })).to.deep.equal({ result: { type: 'A', a: 1 }, fieldErrors: {} });
+      expect(validate({ type: 'b', b: 'x' })).to.deep.equal({ result: { type: 'b', b: 'x' }, fieldErrors: {} });
+      expect(validate({ type: 'constructor' })).to.deep.equal({ result: { type: 'constructor' }, fieldErrors: {} });
+      expect(validate({ type: 'D' })).to.deep.equal({ result: { type: 'D' }, fieldErrors: {} });
+    });
+
+    it('reports an invalid field of the selected member at its own path', () => {
+      const { result, fieldErrors } = validate({ type: 'A', a: 'nope' });
+      expect(result).to.equal(undefined);
+      expect(fieldErrors).to.have.all.keys('body.field.a');
+    });
+
+    it('reports a missing tag at the tag property', () => {
+      expect(validate({ a: 1 }).fieldErrors).to.deep.equal({ 'body.field.type': { message: "'type' is required" } });
+      expect(validate(JSON.parse('{"__proto__":{"type":"A"},"a":1}')).fieldErrors).to.have.all.keys('body.field.type');
+    });
+
+    it('reports an unknown tag at the tag property', () => {
+      expect(validate({ type: 'Z' }).fieldErrors).to.deep.equal({ 'body.field.type': { message: "should be one of the following; ['A','B','b','constructor','D']", value: 'Z' } });
+      expect(validate({ type: 'toString' }).fieldErrors).to.have.all.keys('body.field.type');
+    });
+
+    it('coerces the tag only with body coercion', () => {
+      expect(validate({ type: 1 }, union('TypeA', 'TypeOne'), true)).to.deep.equal({ result: { type: '1' }, fieldErrors: {} });
+      expect(validate({ type: 1 }, union('TypeA', 'TypeOne')).fieldErrors).to.have.all.keys('body.field.type');
+    });
+
+    it('matches members in turn when a tag value repeats across members', () => {
+      const models: TsoaRoute.Models = { First: tagged(['A'], { a: { dataType: 'double', required: true } }), Second: tagged(['A'], { b: { dataType: 'string', required: true } }) };
+      const fieldErrors: FieldErrors = {};
+      const result = new ValidationService(models, { noImplicitAdditionalProperties: 'throw-on-extras', bodyCoercion: false }).validateUnion(
+        'field',
+        { type: 'A', b: 'x' },
+        fieldErrors,
+        true,
+        union('First', 'Second'),
+      );
+      expect({ result, fieldErrors }).to.deep.equal({ result: { type: 'A', b: 'x' }, fieldErrors: {} });
+    });
+  });
+
   describe('Intersection Validate', () => {
     describe('throw on extras', () => {
       it('should validate intersection with 3 or more types', () => {
@@ -2290,7 +2355,7 @@ describe('ValidationService', () => {
       const result = throwing().validateUnion('body', JSON.parse('{"kind":"a","__proto__":{"isAdmin":true}}'), errors, true, unionOf('A', 'B'));
 
       expect(result).to.be.undefined;
-      expect(errors.body.message).to.contain('__proto__');
+      expect(errors).to.have.all.keys('body.__proto__');
     });
 
     it('should remove it from a record model inside a union', () => {

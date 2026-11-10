@@ -184,7 +184,7 @@ function hasDuplicateItems(items: unknown[]): boolean {
 }
 
 export class ValidationService {
-  private readonly unionDiscriminators = new WeakMap<TsoaRoute.PropertySchema, { name: string; members: Map<unknown, TsoaRoute.PropertySchema> } | null>();
+  private readonly unionDiscriminators = new WeakMap<TsoaRoute.PropertySchema, { name: string; members: Map<string | number | boolean | null, TsoaRoute.PropertySchema> } | null>();
 
   constructor(
     private readonly models: TsoaRoute.Models,
@@ -457,7 +457,14 @@ export class ValidationService {
     return numberValue;
   }
 
-  public validateEnum(name: string, value: unknown, fieldErrors: FieldErrors, members?: Array<string | number | boolean | null>, parent = '', isBodyParam = false): unknown {
+  public validateEnum(
+    name: string,
+    value: unknown,
+    fieldErrors: FieldErrors,
+    members?: Array<string | number | boolean | null>,
+    parent = '',
+    isBodyParam = false,
+  ): string | number | boolean | null | undefined {
     if (!members || members.length === 0) {
       fieldErrors[parent + name] = {
         message: 'no member',
@@ -742,32 +749,43 @@ export class ValidationService {
       return null;
     }
 
-    const discriminator = this.getUnionDiscriminator(property);
-    const selected = discriminator && value !== null && typeof value === 'object' ? discriminator.members.get(value[discriminator.name]) : undefined;
-    const members = selected ? [selected] : property.subSchemas;
-    const subFieldErrors: FieldErrors[] = [];
-    const propertyCount = selected ? 0 : this.countRetainedProperties(value, value);
-    let best: { value: any; retained: number } | undefined;
     // The union's own validators have to reach each member, but a union rarely carries any,
     // and without them the merged schema is the member itself.
     const unionValidators = property.validators && Object.keys(property.validators).length > 0 ? property.validators : undefined;
+    const withUnionValidators = (subSchema: TsoaRoute.PropertySchema) => (unionValidators ? { ...subSchema, validators: { ...unionValidators, ...subSchema.validators } } : subSchema);
 
-    for (const subSchema of members) {
+    const discriminator = this.getUnionDiscriminator(property);
+    if (discriminator && value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      // Every member requires the tag, so the tag alone decides the member, or the error.
+      const tag = Object.hasOwn(value, discriminator.name) ? value[discriminator.name] : undefined;
+      if (tag === undefined) {
+        fieldErrors[parent + name + '.' + discriminator.name] = { message: `'${discriminator.name}' is required` };
+        return;
+      }
+      let selected = discriminator.members.get(tag);
+      if (!selected) {
+        // Reports an unknown tag, or finds the member of a coerced tag.
+        const coerced = this.validateEnum(discriminator.name, tag, fieldErrors, [...discriminator.members.keys()], parent + name + '.', isBodyParam);
+        selected = coerced === undefined ? undefined : discriminator.members.get(coerced);
+      }
+      return selected && this.ValidateParam(withUnionValidators(selected), this.cloneForBranch(value), name, fieldErrors, isBodyParam, parent);
+    }
+
+    const subFieldErrors: FieldErrors[] = [];
+    const propertyCount = this.countRetainedProperties(value, value);
+    let best: { value: any; retained: number } | undefined;
+
+    for (const subSchema of property.subSchemas) {
       const subFieldError: FieldErrors = {};
-      const memberSchema = unionValidators ? { ...subSchema, validators: { ...unionValidators, ...subSchema.validators } } : subSchema;
 
       // Clean value if it's not undefined or use undefined directly if it's undefined.
       // Value can be undefined if undefined is allowed datatype of the union
       const validateableValue = value !== undefined ? this.cloneForBranch(value) : value;
-      const cleanValue = this.ValidateParam(memberSchema, validateableValue, name, subFieldError, isBodyParam, parent);
+      const cleanValue = this.ValidateParam(withUnionValidators(subSchema), validateableValue, name, subFieldError, isBodyParam, parent);
       subFieldErrors.push(subFieldError);
 
       if (hasFieldErrors(subFieldError)) {
         continue;
-      }
-
-      if (selected) {
-        return cleanValue;
       }
 
       // A member that keeps every property of the value is as good as it gets, so stop.
@@ -801,16 +819,17 @@ export class ValidationService {
     const first = properties[0];
     if (schemas.length > 1 && first && properties.every(props => props !== undefined)) {
       for (const name of Object.keys(first)) {
-        const members = new Map<unknown, TsoaRoute.PropertySchema>();
-        for (let index = 0; index < properties.length; index++) {
-          const candidate = properties[index]?.[name];
-          const enums = candidate?.required ? this.getLiteralMembers(candidate) : undefined;
-          if (enums?.length !== 1 || members.has(enums[0])) {
-            break;
+        const members = new Map<string | number | boolean | null, TsoaRoute.PropertySchema>();
+        const tagsEveryMember = properties.every((props, index) => {
+          const candidate = props?.[name];
+          const tags = candidate?.required ? this.getLiteralMembers(candidate) : undefined;
+          if (!tags?.length || tags.some(tag => members.has(tag))) {
+            return false;
           }
-          members.set(enums[0], schemas[index]);
-        }
-        if (members.size === schemas.length) {
+          tags.forEach(tag => members.set(tag, schemas[index]));
+          return true;
+        });
+        if (tagsEveryMember) {
           const discriminator = { name, members };
           this.unionDiscriminators.set(property, discriminator);
           return discriminator;
