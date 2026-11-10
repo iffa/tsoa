@@ -30,6 +30,8 @@ import '../controllers/middlewaresHierarchyController';
 import { RegisterRoutes } from './routes';
 
 export const app: express.Express = express();
+// Express 5 defaults to the simple query parser, which reads ?x[]=a as the key 'x[]'.
+app.set('query parser', 'extended');
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use((req, res, next) => {

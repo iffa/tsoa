@@ -45,6 +45,18 @@ Packages are built with tsdown as ESM with bundled declarations and source maps.
 
 Routes that accept file uploads import `multer`. Install `multer` and `@types/multer` in your project. To change multer's options, pass your own instance: `RegisterRoutes(app, { multer: multer({ dest: '/tmp' }) })`. The default instance limits each file to 8 MB.
 
+## Express setup
+
+Express 5 parses queries with its simple parser, which reads `?ids[]=1` as a key named `ids[]`. For bracket syntax in queries and nested form fields:
+
+```ts
+app.set('query parser', 'extended'); // ?filter[a]=x and ?ids[]=1
+app.use(express.urlencoded({ extended: true })); // a[b]=1
+```
+
+- With `express.json()`, a request without a body leaves `req.body` undefined, and a required `@Body()` fails with `'body' is required`.
+- Express 5 reserves `()[]?+!` in route paths and requires a name for each `*` wildcard. A decorator path that breaks these rules fails when the routes register. See the [Express 5 migration guide](https://expressjs.com/en/guide/migrating-5.html#path-route-matching-syntax).
+
 ## Getting Started
 
 - [Documentation](https://tsoa-community.github.io/docs/)
