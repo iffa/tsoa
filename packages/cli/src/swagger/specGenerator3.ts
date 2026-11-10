@@ -647,7 +647,7 @@ export class SpecGenerator3 extends SpecGenerator {
     }
   }
 
-  protected getSwaggerTypeForUnionType(type: Tsoa.UnionType, title?: string) {
+  protected getSwaggerTypeForUnionType(type: Tsoa.UnionType, title?: string): Swagger.BaseSchema | Swagger.Schema3 {
     // Filter out nulls and undefineds
     const actualSwaggerTypes = this.removeDuplicateSwaggerTypes(
       this.groupEnums(

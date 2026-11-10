@@ -227,6 +227,14 @@ export abstract class AbstractRouteGenerator<Config extends ExtendedRoutesConfig
       schema.enums = type.enums;
     }
 
+    if (type.dataType === 'tuple') {
+      schema.tuple = {
+        items: type.types.map(item => this.buildProperty(item)),
+        ...(type.minItems !== undefined && { minItems: type.minItems }),
+        ...(type.restType && { rest: this.buildProperty(type.restType) }),
+      };
+    }
+
     if (type.dataType === 'union' || type.dataType === 'intersection') {
       schema.subSchemas = type.types.map(type => this.buildProperty(type));
     }

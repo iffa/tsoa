@@ -34,7 +34,7 @@ This is a fork of [lukeautry/tsoa](https://github.com/lukeautry/tsoa), published
 
 ## Defaults
 
-Generated routes use Express 5 and ESM imports. OpenAPI defaults to 3.0.
+Generated routes use Express 5 and ESM imports. OpenAPI defaults to 3.0. Set `specVersion: 3.1` for tuple types, which 3.0 can't describe. 3.1 output writes null as a type (`type: ['string', 'null']`) instead of `nullable`.
 Packages require Node 24.11 or newer and use the TypeScript 6 compiler API. TypeScript 5 and earlier are unsupported.
 JSON bodies must match their declared types. Query, path, and multipart fields are parsed from text.
 Undeclared properties are removed, and generated files are written only when their content changes.

@@ -1497,12 +1497,12 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                 { type: 'string', enum: ['String'] },
                 { type: 'number', enum: [1, 20] },
                 { type: 'boolean', enum: [true, false] },
+                { type: 'null' },
               ],
               default: undefined,
               description: undefined,
               example: undefined,
               format: undefined,
-              nullable: true,
             });
           },
           undefineableUnionPrimitiveType: (propertyName, propertySchema) => {
@@ -1520,7 +1520,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
           },
           singleFloatLiteralType: (propertyName, propertySchema) => {
             expect(propertySchema.type).to.eq('number', `for property ${propertyName}.type`);
-            expect(propertySchema.nullable).to.eq(false, `for property ${propertyName}.nullable`);
+            expect(propertySchema.nullable).to.eq(undefined, `for property ${propertyName}.nullable`);
             if (!propertySchema.enum) {
               throw new Error(`There was no 'enum' property on ${propertyName}.`);
             }
@@ -1529,7 +1529,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
           },
           negativeNumberLiteralType: (propertyName, propertySchema) => {
             expect(propertySchema.type).to.eq('number', `for property ${propertyName}.type`);
-            expect(propertySchema.nullable).to.eq(false, `for property ${propertyName}.nullable`);
+            expect(propertySchema.nullable).to.eq(undefined, `for property ${propertyName}.nullable`);
             if (!propertySchema.enum) {
               throw new Error(`There was no 'enum' property on ${propertyName}.`);
             }
@@ -1753,8 +1753,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
             const schema = getComponentSchema('Record_string.string-or-null_', currentSpec);
             expect(schema).to.be.deep.eq({
               additionalProperties: {
-                nullable: true,
-                type: 'string',
+                type: ['string', 'null'],
               },
               default: undefined,
               description: 'Construct a type with a set of properties K of type T',
@@ -1765,11 +1764,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
             });
           },
           nullableRecord: (propertyName, propertySchema) => {
-            expect((propertySchema as any).allOf)
-              .to.be.an('array')
-              .with.length(1);
-            expect((propertySchema as any).allOf[0].$ref).to.eq('#/components/schemas/Record_string.string-or-null_');
-            expect((propertySchema as any).nullable).to.eq(true);
+            expect(propertySchema.anyOf).to.deep.eq([{ $ref: '#/components/schemas/Record_string.string-or-null_' }, { type: 'null' }]);
           },
           modelsObjectIndirect: (propertyName, propertySchema) => {
             expect(propertySchema.$ref).to.eq('#/components/schemas/TestSubModelContainer', `for property ${propertyName}.$ref`);
@@ -2056,7 +2051,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                 a: {
                   type: 'string',
                   enum: ['b'],
-                  nullable: false,
                   description: undefined,
                   example: undefined,
                   format: undefined,
@@ -2280,8 +2274,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                 allOf: [
                   {
                     format: 'double',
-                    nullable: true,
-                    type: 'number',
+                    type: ['number', 'null'],
                   },
                   {
                     properties: {},
@@ -2511,19 +2504,16 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                   default: undefined,
                   description: undefined,
                   example: undefined,
-                  type: 'integer',
+                  type: ['integer', 'null'],
                   format: 'int32',
                   minimum: 5,
-                  nullable: true,
                 },
                 justNull: {
                   default: undefined,
                   description: undefined,
                   example: undefined,
-                  enum: [null],
                   format: undefined,
-                  nullable: true,
-                  type: 'number',
+                  type: 'null',
                 },
               },
               required: ['justNull', 'maybeString', 'wordOrNull', 'numberOrNull'],
@@ -2537,15 +2527,14 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
-                nullable: true,
-                type: 'string',
+                type: ['string', 'null'],
               },
               `for schema linked by property ${propertyName}`,
             );
 
             const maybeWord = getComponentSchema('Maybe_Word_', currentSpec);
             expect(maybeWord).to.deep.eq(
-              { allOf: [{ $ref: '#/components/schemas/Word' }], description: undefined, default: undefined, example: undefined, format: undefined, nullable: true },
+              { anyOf: [{ $ref: '#/components/schemas/Word' }, { type: 'null' }], description: undefined, default: undefined, example: undefined, format: undefined },
               `for schema linked by property ${propertyName}`,
             );
           },
@@ -2581,7 +2570,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                 example: undefined,
                 format: undefined,
                 type: 'string',
-                nullable: false,
               },
               `for property ${propertyName}`,
             );
@@ -2595,7 +2583,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                 example: undefined,
                 format: undefined,
                 type: 'string',
-                nullable: false,
               },
               `for property ${propertyName}`,
             );
@@ -2760,7 +2747,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                 default: undefined,
                 description: undefined,
                 format: undefined,
-                nullable: false,
                 example: undefined,
               },
               `for property ${propertyName}`,
@@ -2965,8 +2951,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                     description: undefined,
                     example: undefined,
                     format: undefined,
-                    nullable: true,
-                    type: 'string',
+                    type: ['string', 'null'],
                   },
                   defaultObject: {
                     default: {
@@ -3719,7 +3704,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 enum: ['DD'],
                 type: 'string',
-                nullable: false,
                 description: undefined,
                 default: undefined,
                 example: undefined,
@@ -3984,9 +3968,7 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
             const nullMapSchema = getComponentSchema('Partial_null_', currentSpec);
             expect(nullMapSchema).to.deep.eq(
               {
-                enum: [null],
-                type: 'number',
-                nullable: true,
+                type: 'null',
                 default: undefined,
                 description: 'Make all properties in T optional',
                 example: undefined,
@@ -4081,7 +4063,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 type: 'string',
                 enum: ['a', 'b', 'e'],
-                nullable: false,
                 default: undefined,
                 description: undefined,
                 example: undefined,
@@ -4093,7 +4074,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 type: 'string',
                 enum: ['c', 'd'],
-                nullable: false,
                 default: undefined,
                 description: undefined,
                 example: undefined,
@@ -4124,7 +4104,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 type: 'string',
                 enum: ['A', 'B', 'C'],
-                nullable: false,
                 default: undefined,
                 description: undefined,
                 example: undefined,
@@ -4155,7 +4134,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 type: 'string',
                 enum: ['A', 'B', 'C'],
-                nullable: false,
                 default: undefined,
                 description: undefined,
                 example: undefined,
@@ -4186,7 +4164,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 type: 'string',
                 enum: ['a'],
-                nullable: false,
                 default: undefined,
                 description: undefined,
                 example: undefined,
@@ -4198,7 +4175,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
               {
                 type: 'number',
                 enum: [3],
-                nullable: false,
                 default: undefined,
                 description: undefined,
                 example: undefined,
@@ -4274,7 +4250,6 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
                   keys: {
                     type: 'string',
                     enum: ['a', 'b', 'e'],
-                    nullable: false,
                     default: undefined,
                     description: undefined,
                     example: undefined,
@@ -4476,12 +4451,11 @@ describe('Definition generation for OpenAPI 3.1.0', () => {
           },
           nullableStringLiteral: (propertyName, propertySchema) => {
             expect(propertySchema).to.not.haveOwnProperty('additionalProperties', `for property ${propertyName}`);
-            expect(propertySchema.nullable).to.eq(true, `for property ${propertyName}[x-nullable]`);
+            expect(propertySchema.nullable).to.eq(undefined, `for property ${propertyName}.nullable`);
 
             expect(propertySchema).to.deep.eq({
-              type: 'string',
+              type: ['string', 'null'],
               enum: ['NULLABLE_LIT_1', 'NULLABLE_LIT_2', null],
-              nullable: true,
               description: undefined,
               example: undefined,
               format: undefined,

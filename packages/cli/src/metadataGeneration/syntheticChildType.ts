@@ -8,15 +8,21 @@ const noChildTypes: ReadonlyMap<ts.Node, ts.Type> = new Map();
 
 export const isSynthetic = (node: ts.Node) => node.pos === -1;
 
-// A rest element `...X[]` stands for X. Any other rest element keeps its node, and the resolver reads an array it resolves to as its elements.
+export function isRestTupleElement(element: ts.TypeNode): boolean {
+  return ts.isRestTypeNode(element) || (ts.isNamedTupleMember(element) && element.dotDotDotToken !== undefined);
+}
+
+export function isOptionalTupleElement(element: ts.TypeNode): boolean {
+  return ts.isOptionalTypeNode(element) || (ts.isNamedTupleMember(element) && element.questionToken !== undefined);
+}
+
+/**
+ * The type node of a tuple element without its name, `?` or `...`. A rest element written as `...T[]` gives `T`.
+ * Any other rest element keeps its node, and the resolver reads an array it resolves to as its elements.
+ */
 export function tupleElementNode(element: ts.TypeNode): ts.TypeNode {
-  if (ts.isNamedTupleMember(element)) {
-    return element.type;
-  }
-  if (ts.isRestTypeNode(element)) {
-    return ts.isArrayTypeNode(element.type) ? element.type.elementType : element.type;
-  }
-  return element;
+  const type = ts.isNamedTupleMember(element) || ts.isRestTypeNode(element) || ts.isOptionalTypeNode(element) ? element.type : element;
+  return isRestTupleElement(element) && ts.isArrayTypeNode(type) ? type.elementType : type;
 }
 
 const printKey = (node: ts.TypeNode) => printNode(ts.isParenthesizedTypeNode(node) ? node.type : node);
@@ -76,7 +82,7 @@ export function syntheticChildTypes(checker: ts.TypeChecker, parent: ts.Node, pa
       const elementTypes = checker.getTypeArguments(parentType as ts.TypeReference);
       parent.elements.forEach((element, index) => {
         if (!(ts.isNamedTupleMember(element) && element.dotDotDotToken)) {
-          assign(tupleElementNode(element), elementTypes[index], ts.isNamedTupleMember(element) && !!element.questionToken);
+          assign(tupleElementNode(element), elementTypes[index], isOptionalTupleElement(element));
         }
       });
     }

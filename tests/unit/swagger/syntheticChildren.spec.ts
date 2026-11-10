@@ -301,13 +301,13 @@ const rows: Row[] = [
       // The first order gives the empty object on master too.
       const outputs = {
         exactNullAliasLitFirst: strictNullChecks ? { type: empty, schema: { type: 'object', properties: {} } } : { type: leaf, schema: leafSchema },
-        exactNullAliasDirectFirst: strictNullChecks ? { type: nullable, schema: { ...leafSchema, nullable: true } } : { type: leaf, schema: leafSchema },
+        exactNullAliasDirectFirst: strictNullChecks ? { type: nullable, schema: { ...leafSchema, type: ['object', 'null'] } } : { type: leaf, schema: leafSchema },
       };
       for (const [controller, output] of Object.entries(outputs)) {
         const { metadata, schemas } = generate(`syntheticChildren/${controller}Controller`);
         expect(JSON.parse(JSON.stringify(refAlias(metadata, name).type)), `${controller} alias`).to.deep.equal(output.type);
         expect(schemas[name], `${controller} schema`).to.deep.equal(output.schema);
-        expect(strictNullChecks && schemas[name].properties?.text !== undefined && schemas[name].nullable !== true, `${controller} object without null`).to.equal(false);
+        expect(strictNullChecks && schemas[name].properties?.text !== undefined && !schemas[name].type?.includes('null'), `${controller} object without null`).to.equal(false);
       }
     },
   },
@@ -387,7 +387,7 @@ const rows: Row[] = [
   preservationRow('boolean', ({ resolve, response }, strictNullChecks) => {
     const members = required(resolve(response(route('mapped'))).properties, 'mapped members');
     expect(members.flag).to.deep.equal({ type: 'boolean' });
-    expect(members.maybeFlag).to.deep.equal(strictNullChecks ? { type: 'boolean', nullable: true } : { type: 'boolean' });
+    expect(members.maybeFlag).to.deep.equal(strictNullChecks ? { type: ['boolean', 'null'] } : { type: 'boolean' });
   }),
   preservationRow('an enum name', ({ schemas, resolve, response }) => {
     const members = required(resolve(response(route('mapped'))).properties, 'mapped members');
@@ -399,7 +399,7 @@ const rows: Row[] = [
     const mapped = required(resolve(response(route('mapped'))).properties, 'mapped members');
     expect(mapped.side).to.deep.equal({ type: 'string', enum: ['width', 'height'] });
     const source = required(resolve(response(route('source'))).properties, 'source members');
-    expect(source.key).to.deep.equal({ type: 'string', enum: ['width', 'height'], nullable: false });
+    expect(source.key).to.deep.equal({ type: 'string', enum: ['width', 'height'] });
     expect(source.mixed).to.deep.equal({ type: 'string', enum: ['width', 'height', 'other'] });
   }),
   preservationRow('a named alias inside a union', ({ schemas, resolve, response }) => {

@@ -299,6 +299,8 @@ export namespace Tsoa {
   export interface TupleType extends TypeBase {
     dataType: 'tuple';
     types: Type[];
+    /** How many leading elements are required, when some are optional. Otherwise every element is. */
+    minItems?: number;
     restType?: Type;
   }
 

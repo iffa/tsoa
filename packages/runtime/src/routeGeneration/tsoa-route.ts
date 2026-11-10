@@ -53,6 +53,14 @@ export namespace TsoaRoute {
     default?: unknown;
     additionalProperties?: boolean | PropertySchema;
     nestedProperties?: { [name: string]: PropertySchema };
+    tuple?: TupleSchema;
+  }
+
+  export interface TupleSchema {
+    items: PropertySchema[];
+    /** How many leading items are required. Every item is when it's absent. */
+    minItems?: number;
+    rest?: PropertySchema;
   }
 
   export interface ParameterSchema extends PropertySchema {
