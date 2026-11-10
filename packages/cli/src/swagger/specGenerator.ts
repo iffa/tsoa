@@ -156,7 +156,12 @@ export abstract class SpecGenerator {
   public getSwaggerTypeForObjectLiteral(objectLiteral: Tsoa.NestedObjectLiteralType, title?: string): Swagger.BaseSchema {
     const properties = this.buildProperties(objectLiteral.properties);
 
-    const additionalProperties = objectLiteral.additionalProperties && this.getSwaggerType(objectLiteral.additionalProperties);
+    // Under 'ignore' extras are the implicit default, so the schema leaves the keyword out.
+    const additionalProperties = objectLiteral.additionalProperties
+      ? this.getSwaggerType(objectLiteral.additionalProperties)
+      : this.config.noImplicitAdditionalProperties === 'ignore'
+        ? undefined
+        : false;
 
     const required = objectLiteral.properties.filter(prop => this.isRequiredWithoutDefault(prop) && !this.hasUndefined(prop)).map(prop => prop.name);
 
@@ -165,7 +170,7 @@ export abstract class SpecGenerator {
     return {
       ...(title && { title }),
       properties,
-      ...(additionalProperties && { additionalProperties }),
+      ...(additionalProperties !== undefined && { additionalProperties }),
       ...(required && required.length && { required }),
       type: 'object',
     };

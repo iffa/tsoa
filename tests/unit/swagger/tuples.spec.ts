@@ -27,6 +27,11 @@ describe('Tuples', () => {
       expect(properties.namedRest).to.deep.include({ prefixItems: [{ type: 'string' }], minItems: 1, items: { type: 'number', format: 'double' } });
       expect(properties.namedRest).to.not.have.property('maxItems');
     });
+
+    it('names a generic instantiation after the order of its tuple elements', () => {
+      expect(schemas['TupleBox__string.number__'].properties!.value).to.deep.include({ prefixItems: [{ type: 'string' }, { type: 'number', format: 'double' }] });
+      expect(schemas['TupleBox__number.string__'].properties!.value).to.deep.include({ prefixItems: [{ type: 'number', format: 'double' }, { type: 'string' }] });
+    });
   });
 
   it('is refused by OpenAPI 3.0', () => {

@@ -121,6 +121,11 @@ export class MetadataGenerator {
     return this.typeChecker;
   }
 
+  /** Whether the file is one of TypeScript's lib files. */
+  public isDefaultLibrary(file: ts.SourceFile): boolean {
+    return this.program.isSourceFileDefaultLibrary(file);
+  }
+
   public AddReferenceType(referenceType: Tsoa.ReferenceType) {
     if (!referenceType.refName) {
       throw new Error('no reference type name found');
