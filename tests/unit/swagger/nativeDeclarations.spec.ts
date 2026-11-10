@@ -100,6 +100,14 @@ export class C {
       expect(read('baseLimit.ts')).to.include('= 25');
     }).timeout(30_000);
 
+    it('keeps the source of a file whose initializer keys have JSDoc, and of a file that builds on it', () => {
+      const host = createNativeDeclarationHost([controller], { experimentalDecorators: true }, undefined, tsconfig)!;
+      const read = (name: string) => host.getSourceFile(resolve(fixtures, name), 99)?.text ?? '';
+
+      expect(read('schema.ts')).to.include('/** Where the confirmation goes */');
+      expect(read('extendedSchema.ts')).to.include('zSignup.extend(');
+    }).timeout(30_000);
+
     it('reads sources when turned off', () => {
       expect(withoutNative(() => createNativeDeclarationHost([controller], {}, undefined, tsconfig))).to.equal(undefined);
     });

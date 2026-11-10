@@ -1,6 +1,8 @@
 import { Controller, Get, Middlewares, Query, Route, Tags } from '@iffa/tsoa-runtime';
 import { DEFAULT_LIMIT, ROUTE_NAME, TAG } from './constants';
 import { ClassModel, Color, Thing, Widget } from './model';
+import { NamedSignup } from './extendedSchema';
+import { Signup } from './schema';
 import { onlyInBody } from './onlyInBody';
 import { loadWidget, makeThing } from './service';
 
@@ -34,5 +36,15 @@ export class NativeController extends Controller {
   @Get('thing')
   public async thing(): Promise<Thing> {
     return makeThing(false);
+  }
+
+  @Get('signup')
+  public async signup(): Promise<Signup> {
+    return { email: '' };
+  }
+
+  @Get('named-signup')
+  public async namedSignup(): Promise<NamedSignup> {
+    return { email: '', name: '' };
   }
 }
