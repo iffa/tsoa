@@ -11,6 +11,7 @@ import { ParameterGenerator } from './parameterGenerator';
 import { Tsoa } from '@iffa/tsoa-runtime';
 import { TypeResolver } from './typeResolver';
 import { getHeaderType } from '../utils/headerTypeHelpers';
+import { hasBinaryBody } from '../utils/internalTypeGuards';
 
 type HttpMethod = 'options' | 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head';
 
@@ -71,7 +72,7 @@ export class MethodGenerator {
       parameters,
       path: this.path,
       produces: this.produces,
-      consumes: this.consumes,
+      consumes: this.consumes ?? (hasBinaryBody(parameters) ? 'application/octet-stream' : undefined),
       responses,
       successStatus,
       security: this.getSecurity(),

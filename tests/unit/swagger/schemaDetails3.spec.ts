@@ -907,6 +907,24 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
             expect(bodyMediaTypeDefault).to.eql('application/json');
             expect(bodyMediaTypeCustom).to.eql('application/vnd.mycompany.myapp.v2+json');
           });
+
+          it('Should describe a Readable request body as application/octet-stream binary, written as stream.Readable or through an alias too', () => {
+            for (const path of ['/MediaTypeTest/Binary', '/MediaTypeTest/Binary/Query']) {
+              const requestBody = mediaTypeTest.paths[path]?.post?.requestBody as Swagger.RequestBody;
+              expect(Object.keys(requestBody.content), path).to.deep.eq(['application/octet-stream']);
+              expect(requestBody.content['application/octet-stream'].schema, path).to.deep.eq({ type: 'string', format: 'binary' });
+              expect(requestBody.required, path).to.eq(true);
+            }
+            const custom = mediaTypeTest.paths['/MediaTypeTest/Binary/Custom']?.post?.requestBody as Swagger.RequestBody;
+            expect(Object.keys(custom.content)).to.deep.eq(['image/png']);
+            expect(custom.content['image/png'].schema).to.deep.eq({ type: 'string', format: 'binary' });
+          });
+
+          it('Should keep a Buffer request body as a JSON byte string', () => {
+            const requestBody = mediaTypeTest.paths['/MediaTypeTest/Buffer']?.post?.requestBody as Swagger.RequestBody;
+            expect(Object.keys(requestBody.content)).to.deep.eq(['application/json']);
+            expect(requestBody.content['application/json'].schema).to.deep.eq({ type: 'string', format: 'byte' });
+          });
         });
 
         it('Supports multiple examples', () => {
