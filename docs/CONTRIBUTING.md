@@ -2,7 +2,7 @@
 
 ## 1. Search for Duplicates
 
-[Search the existing issues](https://github.com/lukeautry/tsoa/search?type=Issues) before logging a new one.
+[Search the existing issues](https://github.com/iffa/tsoa/search?type=Issues) before logging a new one.
 
 Some search tips:
 
@@ -20,8 +20,8 @@ Please follow the issue template and include as much information as you can. Thi
 
 We also accept suggestions in the issue tracker.
 
-- Be sure to [search](https://github.com/lukeautry/tsoa/search?type=Issues) first for a duplicate.
-- Please ensure that your suggestion adheres to the [goals](https://github.com/lukeautry/tsoa#goal) and [philosophy](https://github.com/lukeautry/tsoa#philosophy) of the project
+- Be sure to [search](https://github.com/iffa/tsoa/search?type=Issues) first for a duplicate.
+- Please ensure that your suggestion adheres to the [goals](https://github.com/iffa/tsoa#goal) and [philosophy](https://github.com/iffa/tsoa#philosophy) of the project
 
 # Instructions for Contributing Code
 
@@ -41,9 +41,7 @@ Your pull request should include a link to the bug that you are fixing. If you'v
 
 ## Contributing features
 
-Features (things that add new or improved functionality to tsoa) may be accepted, but will need to **first** be approved by having the (["help wanted" label](https://github.com/lukeautry/tsoa/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22) by a tsoa project maintainer) in the suggestion issue.
-
-Design changes will not be accepted at this time. If you have a design change proposal, please log a suggestion issue.
+Open a suggestion issue before starting on a feature, so it can be agreed on first.
 
 ## Information on the types of tests in tsoa
 

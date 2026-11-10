@@ -295,7 +295,7 @@ export class ValidationService {
         'internal tsoa error: ' +
           'the metadata that was generated should have had nested property schemas since it’s for a nested object,' +
           'however it did not. ' +
-          'Please file an issue with tsoa at https://github.com/lukeautry/tsoa/issues',
+          'Please file an issue with tsoa at https://github.com/iffa/tsoa/issues',
       );
     }
 
@@ -686,7 +686,7 @@ export class ValidationService {
       throw new Error(
         'internal tsoa error: ' +
           'the metadata that was generated should have had sub schemas since it’s for a union, however it did not. ' +
-          'Please file an issue with tsoa at https://github.com/lukeautry/tsoa/issues',
+          'Please file an issue with tsoa at https://github.com/iffa/tsoa/issues',
       );
     }
 
@@ -852,7 +852,7 @@ export class ValidationService {
       throw new Error(
         'internal tsoa error: ' +
           'the metadata that was generated should have had sub schemas since it’s for a intersection, however it did not. ' +
-          'Please file an issue with tsoa at https://github.com/lukeautry/tsoa/issues',
+          'Please file an issue with tsoa at https://github.com/iffa/tsoa/issues',
       );
     }
 

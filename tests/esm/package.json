@@ -14,7 +14,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukeautry/tsoa.git"
+    "url": "https://github.com/iffa/tsoa.git"
   },
   "engines": {
     "node": ">=24.11.0"
