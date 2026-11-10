@@ -39,7 +39,6 @@
   "author": "Luke Autry <lukeautry@gmail.com> (http://www.lukeautry.com)",
   "license": "MIT",
   "dependencies": {
-    "@types/multer": "2.3.0",
     "reflect-metadata": "0.2.2",
     "validator": "13.15.35"
   },

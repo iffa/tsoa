@@ -42,8 +42,9 @@ export class MetadataGenerator {
    * Reads the provided tsconfig.json and merges its compiler options with any explicit
    * overrides. Explicit overrides take precedence over tsconfig settings.
    */
-  static resolveTsconfigPath(entryFile: string): string | undefined {
-    const searchDir = path.isAbsolute(entryFile) ? path.dirname(entryFile) : path.dirname(path.resolve(entryFile));
+  static resolveTsconfigPath(entryFile: string | undefined): string | undefined {
+    // A config that only lists controllerPathGlobs has no entry file, and its project is the working directory.
+    const searchDir = entryFile ? path.dirname(path.resolve(entryFile)) : process.cwd();
     return ts.findConfigFile(searchDir, ts.sys.fileExists.bind(ts.sys), 'tsconfig.json');
   }
 

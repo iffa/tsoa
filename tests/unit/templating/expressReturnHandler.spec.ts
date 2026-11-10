@@ -105,3 +105,61 @@ describe('ExpressTemplateService response serialization', () => {
     expect(res.text).to.equal('null');
   });
 });
+
+describe('ExpressTemplateService stream errors before any data', () => {
+  const templateService = new ExpressTemplateService({}, { noImplicitAdditionalProperties: 'throw-on-extras', bodyCoercion: true });
+
+  class FailingDownloadController extends Controller {
+    constructor() {
+      super();
+      this.setHeader('Content-Type', 'application/pdf');
+      this.setHeader('Content-Disposition', 'attachment; filename="report.pdf"');
+      this.setStatus(206);
+    }
+
+    public async download() {
+      return new Readable({
+        read() {
+          this.destroy(new Error('stream_test_error'));
+        },
+      });
+    }
+  }
+
+  function serve(errorHandler: express.ErrorRequestHandler, earlierMiddleware: express.RequestHandler = (_req, _res, next) => next()) {
+    const app = express();
+    app.get('/', earlierMiddleware, (_req, res, next) => {
+      void templateService.apiHandler({ methodName: 'download', controller: new FailingDownloadController(), response: res, next, validatedArgs: [] });
+    });
+    app.use(errorHandler);
+    return request(app as Parameters<typeof request>[0]).get('/');
+  }
+
+  it('hands the error handler a response without the controller status and headers', async () => {
+    const res = await serve((error: Error, _req, res, _next) => {
+      res.json({ message: error.message });
+    });
+
+    expect(res.status).to.equal(200);
+    expect(res.type).to.equal('application/json');
+    expect(res.headers).to.not.have.property('content-disposition');
+    expect(res.body).to.deep.equal({ message: 'stream_test_error' });
+  });
+
+  it('keeps headers set by earlier middleware', async () => {
+    const res = await serve(
+      (error: Error, _req, res, _next) => {
+        res.status(500).json({ message: error.message });
+      },
+      (_req, res, next) => {
+        res.setHeader('X-Request-Id', 'abc');
+        res.setHeader('Content-Disposition', 'inline');
+        next();
+      },
+    );
+
+    expect(res.status).to.equal(500);
+    expect(res.headers['x-request-id']).to.equal('abc');
+    expect(res.headers['content-disposition']).to.equal('inline');
+  });
+});

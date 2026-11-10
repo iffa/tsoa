@@ -108,7 +108,8 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
         case 'formData': {
           const files = this.getParameters(args).filter(p => p.dataType === 'file' || (p.dataType === 'array' && p.array && p.array.dataType === 'file'));
           if ((param.dataType === 'file' || (param.dataType === 'array' && param.array && param.array.dataType === 'file')) && files.length > 0) {
-            const requestFiles = request.files as { [fileName: string]: Express.Multer.File[] } | undefined;
+            // multer sets request.files. The runtime doesn't depend on multer's types.
+            const requestFiles = (request as ExRequest & { files?: Record<string, unknown[]> }).files;
 
             const fileArgs = this.validationService.ValidateParam(param, requestFiles?.[name], name, fieldErrors, false, undefined);
             if (param.dataType === 'array') {
@@ -175,6 +176,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
     if (response.headersSent) {
       return;
     }
+    const restoreResponse = this.captureResponseState(response, Object.keys(headers));
     Object.keys(headers).forEach((name: string) => {
       response.set(name, headers[name]);
     });
@@ -184,7 +186,7 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
 
     if (data && typeof data.pipe === 'function' && data.readable && typeof data._read === 'function') {
       response.status(statusCode || 200);
-      this.pipeStream(data as Readable, response, next);
+      this.pipeStream(data as Readable, response, restoreResponse, next);
     } else if (data === undefined || (data === null && !isJsonResponse)) {
       response.status(statusCode || 204).end();
     } else if (data instanceof Uint8Array) {
@@ -199,14 +201,29 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
   }
 
   /**
+   * Returns a function that puts the status and the given headers back to what earlier
+   * middleware left. An error handler then answers without the success status, content type
+   * or disposition that the controller set for its stream.
+   */
+  private captureResponseState(response: ExResponse, headerNames: string[]): () => void {
+    const statusCode = response.statusCode;
+    const headers = headerNames.map(name => [name, response.getHeader(name)] as const);
+    return () => {
+      response.statusCode = statusCode;
+      headers.forEach(([name, value]) => (value === undefined ? response.removeHeader(name) : response.setHeader(name, value)));
+    };
+  }
+
+  /**
    * stream.pipeline destroys the response as soon as the source fails, which leaves the error
    * handler nothing to answer with. An error before any data goes to next; after that the
    * response is destroyed, so the client sees a truncated transfer.
    */
-  private pipeStream(stream: Readable, response: ExResponse, next?: ExNext) {
+  private pipeStream(stream: Readable, response: ExResponse, restoreResponse: () => void, next?: ExNext) {
     stream.on('error', (error: Error) => {
       stream.unpipe(response);
       if (!response.headersSent && next) {
+        restoreResponse();
         next(error);
         return;
       }
@@ -216,4 +233,3 @@ export class ExpressTemplateService extends TemplateService<ExpressApiHandlerPar
     stream.pipe(response);
   }
 }
-import type {} from 'multer';

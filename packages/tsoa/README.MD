@@ -43,6 +43,8 @@ Literal routes register before parameter routes across controllers. Equivalent r
 `@iffa/tsoa` exports runtime decorators and validation. Import generation APIs from `@iffa/tsoa-cli`; the `tsoa` executable provides the generation commands. Generated routes import from `@iffa/tsoa-runtime`.
 Packages are built with tsdown as ESM with bundled declarations and source maps.
 
+Routes that accept file uploads import `multer`. Install `multer` and `@types/multer` in your project. To change multer's options, pass your own instance: `RegisterRoutes(app, { multer: multer({ dest: '/tmp' }) })`. The default instance limits each file to 8 MB.
+
 ## Getting Started
 
 - [Documentation](https://tsoa-community.github.io/docs/)

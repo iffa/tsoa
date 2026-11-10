@@ -3,7 +3,7 @@ import { expect } from 'chai';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'fs';
 import 'mocha';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import type { CompilerOptions } from 'typescript';
 
 describe('tsconfig resolution', () => {
@@ -82,6 +82,18 @@ describe('tsconfig resolution', () => {
 
     try {
       expect(generate({ paths: { alias: ['./widget.ts'] } }).referenceTypeMap).to.have.property('Widget');
+    } finally {
+      process.chdir(workingDir);
+    }
+  });
+
+  it('looks for the tsconfig in the working directory when there is no entry file', () => {
+    write('tsconfig.json', '{}');
+    const workingDir = process.cwd();
+    process.chdir(projectDir);
+    try {
+      expect(resolve(MetadataGenerator.resolveTsconfigPath('') ?? '')).to.equal(join(projectDir, 'tsconfig.json'));
+      expect(resolve(MetadataGenerator.resolveTsconfigPath(undefined) ?? '')).to.equal(join(projectDir, 'tsconfig.json'));
     } finally {
       process.chdir(workingDir);
     }
