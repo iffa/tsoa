@@ -9,7 +9,7 @@ import { GenerateMetadataError, GenerateMetaDataWarning } from './exceptions';
 import { getExtensions, getExtensionsFromJSDocComments } from './extension';
 import { getInitializerValue } from './initializer-value';
 import { MetadataGenerator } from './metadataGenerator';
-import { isSynthetic, syntheticChildTypes, tupleElementNode } from './syntheticChildType';
+import { isOptionalTupleElement, isRestTupleElement, isSynthetic, syntheticChildTypes, tupleElementNode } from './syntheticChildType';
 
 import { PrimitiveTransformer } from './transformer/primitiveTransformer';
 import { DateTransformer } from './transformer/dateTransformer';
@@ -118,20 +118,25 @@ export class TypeResolver {
     if (ts.isTupleTypeNode(this.typeNode)) {
       const elementTypes: Tsoa.Type[] = [];
       let restType: Tsoa.Type | undefined;
+      let requiredCount = 0;
 
       for (const element of this.typeNode.elements) {
         const node = tupleElementNode(element);
         const type = this.child(node, element).resolve();
-        if (ts.isRestTypeNode(element)) {
-          restType = node === element.type && type.dataType === 'array' ? type.elementType : type;
+        if (isRestTupleElement(element)) {
+          // `...T[]` was unwrapped to T. `...Alias` resolves to the array itself.
+          const written = ts.isNamedTupleMember(element) || ts.isRestTypeNode(element) ? element.type : element;
+          restType = node === written && type.dataType === 'array' ? type.elementType : type;
         } else {
           elementTypes.push(type);
+          requiredCount += isOptionalTupleElement(element) ? 0 : 1;
         }
       }
 
       return {
         dataType: 'tuple',
         types: elementTypes,
+        ...(requiredCount < elementTypes.length && { minItems: requiredCount }),
         ...(restType ? { restType } : {}),
       };
     }

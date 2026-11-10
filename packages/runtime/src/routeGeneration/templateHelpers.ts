@@ -147,7 +147,13 @@ function schemaReachesRef(models: TsoaRoute.Models, schema: TsoaRoute.PropertySc
     return schema.ref === target || canReachRef(models, schema.ref, target, visited);
   }
 
-  const children: Array<TsoaRoute.PropertySchema | boolean | undefined> = [schema.array, schema.additionalProperties, ...(schema.subSchemas || []), ...Object.values(schema.nestedProperties || {})];
+  const children: Array<TsoaRoute.PropertySchema | boolean | undefined> = [
+    schema.array,
+    schema.additionalProperties,
+    ...(schema.subSchemas || []),
+    ...Object.values(schema.nestedProperties || {}),
+    ...(schema.tuple ? [...schema.tuple.items, schema.tuple.rest] : []),
+  ];
 
   return children.some(child => schemaReachesRef(models, child, target, visited));
 }
@@ -230,6 +236,8 @@ export class ValidationService {
         return this.validateEnum(name, value, fieldErrors, property.enums, parent, isBodyParam);
       case 'array':
         return this.validateArray(name, value, fieldErrors, isBodyParam, property.array, property.validators as ArrayValidator, parent);
+      case 'tuple':
+        return this.validateTuple(name, value, fieldErrors, isBodyParam, property.tuple, parent);
       case 'date':
         return this.validateDate(name, value, fieldErrors, isBodyParam, property.validators as DateValidator, parent);
       case 'datetime':
@@ -673,6 +681,34 @@ export class ValidationService {
       return;
     }
     return arrayValue;
+  }
+
+  /** Validates each item against the schema for its position, with the same coercion as an array. */
+  public validateTuple(name: string, value: unknown, fieldErrors: FieldErrors, isBodyParam: boolean, tuple: TsoaRoute.TupleSchema | undefined, parent = ''): unknown[] | undefined {
+    if (!tuple) {
+      throw new Error('internal tsoa error: the generated metadata of a tuple has no item schemas. Please file an issue with tsoa at https://github.com/iffa/tsoa/issues');
+    }
+    if (value === undefined || (isBodyParam && this.config.bodyCoercion === false && !Array.isArray(value))) {
+      fieldErrors[parent + name] = { message: 'invalid array', value };
+      return;
+    }
+
+    const items: unknown[] = Array.isArray(value) ? value : [value];
+    const minItems = tuple.minItems ?? tuple.items.length;
+    if (items.length < minItems) {
+      fieldErrors[parent + name] = { message: `minItems ${minItems}`, value };
+      return;
+    }
+    if (!tuple.rest && items.length > tuple.items.length) {
+      fieldErrors[parent + name] = { message: `maxItems ${tuple.items.length}`, value };
+      return;
+    }
+
+    const previousErrors = countFieldErrors(fieldErrors);
+    const childPath = parent + name + '.';
+    const validated: unknown[] = items.map((item, index) => this.ValidateParam(tuple.items[index] ?? tuple.rest!, item, `$${index}`, fieldErrors, isBodyParam, childPath));
+
+    return countFieldErrors(fieldErrors) > previousErrors ? undefined : validated;
   }
 
   public validateBuffer(name: string, value: unknown, fieldErrors: FieldErrors, parent = '') {

@@ -11,12 +11,10 @@ import { SpecGenerator3 } from './specGenerator3';
 /**
  * OpenAPI 3.1 Spec Generator
  *
- * Extends SpecGenerator3 with OpenAPI 3.1 specific features:
- * - Tuple support via prefixItems
- * - OpenAPI version 3.1.0
- *
- * Uses inheritance to reuse all building logic from SpecGenerator3,
- * only overriding the version and adding tuple type support.
+ * Reuses SpecGenerator3 and overrides what 3.1 writes differently:
+ * - tuples as prefixItems
+ * - null as a type
+ * - exclusive bounds as numbers
  */
 export class SpecGenerator31 extends SpecGenerator3 {
   constructor(
@@ -81,7 +79,7 @@ export class SpecGenerator31 extends SpecGenerator3 {
       const schema: Swagger.Schema31 = {
         type: 'array',
         prefixItems,
-        minItems: prefixItems.length,
+        minItems: type.minItems ?? prefixItems.length,
         ...(type.restType
           ? {
               items: this.getSwaggerType(type.restType) as Swagger.Schema31,
@@ -92,10 +90,56 @@ export class SpecGenerator31 extends SpecGenerator3 {
             }),
       };
 
-      return schema as unknown as Swagger.BaseSchema;
+      return schema as unknown as Swagger.Schema3;
     }
 
     return super.getSwaggerType(type, title);
+  }
+
+  /**
+   * OpenAPI 3.1 has no `nullable`. Null is a JSON Schema type, so a nullable union is built from its
+   * other members and then given null as a type. The shared 3.0 code types a schema's `type` as one
+   * string, so these overrides return their 3.1 schemas through a cast.
+   */
+  protected override getSwaggerTypeForUnionType(type: Tsoa.UnionType, title?: string): Swagger.BaseSchema | Swagger.Schema3 {
+    const nonNullTypes = type.types.filter(member => !this.isNull(member));
+    if (nonNullTypes.length === type.types.length) {
+      return super.getSwaggerTypeForUnionType(type, title);
+    }
+    const schema = nonNullTypes.every(member => member.dataType === 'undefined')
+      ? { ...(title && { title }), type: 'null' as const }
+      : this.withNull(super.getSwaggerTypeForUnionType({ ...type, types: nonNullTypes }, title));
+    return schema as unknown as Swagger.Schema3;
+  }
+
+  protected override getSwaggerTypeForEnumType(enumType: Tsoa.EnumType, title?: string): Swagger.Schema3 {
+    const nonNullEnums = enumType.enums.filter(member => member !== null);
+    if (nonNullEnums.length === 0) {
+      return { ...(title && { title }), type: 'null' } as unknown as Swagger.Schema3;
+    }
+    const schema = super.getSwaggerTypeForEnumType({ ...enumType, enums: nonNullEnums }, title);
+    delete schema.nullable;
+    return nonNullEnums.length === enumType.enums.length ? schema : (this.withNull(schema) as unknown as Swagger.Schema3);
+  }
+
+  protected override buildParameter(source: Tsoa.Parameter): Swagger.Parameter3 {
+    if (source.type.dataType !== 'union' || !source.type.types.some(member => this.isNull(member))) {
+      return super.buildParameter(source);
+    }
+    const parameter = super.buildParameter({ ...source, type: { ...source.type, types: source.type.types.filter(member => !this.isNull(member)) } });
+    return { ...parameter, schema: this.withNull(parameter.schema) as unknown as Swagger.Schema3 };
+  }
+
+  /** Adds null to a schema: to its type when it has a single one, otherwise as an alternative. */
+  private withNull(schema: Swagger.BaseSchema): Swagger.Schema31 {
+    const { title, ...rest } = schema as Swagger.Schema31;
+    if (typeof rest.type === 'string' && !rest.$ref) {
+      return { ...(title && { title }), ...rest, type: [rest.type, 'null'], ...(rest.enum && { enum: [...rest.enum, null] }) };
+    }
+    if (rest.anyOf && Object.keys(rest).length === 1) {
+      return { ...(title && { title }), anyOf: [...rest.anyOf, { type: 'null' }] };
+    }
+    return { ...(title && { title }), anyOf: [rest, { type: 'null' }] };
   }
 
   private isTupleType(type: Tsoa.Type): type is Tsoa.TupleType {

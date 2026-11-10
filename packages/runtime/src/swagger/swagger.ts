@@ -270,7 +270,12 @@ export namespace Swagger {
     not?: BaseSchema;
   }
 
-  export interface Schema31 extends Omit<Schema3, 'items' | 'properties' | 'additionalProperties' | 'discriminator' | 'anyOf' | 'allOf' | 'not' | 'exclusiveMinimum' | 'exclusiveMaximum'> {
+  export type DataType31 = DataType | 'null';
+
+  export interface Schema31 extends Omit<Schema3, 'type' | 'nullable' | 'items' | 'properties' | 'additionalProperties' | 'discriminator' | 'anyOf' | 'allOf' | 'not' | 'exclusiveMinimum' | 'exclusiveMaximum'> {
+    type?: DataType31 | DataType31[];
+    /** 3.1 writes null as a type. */
+    nullable?: never;
     examples?: unknown[];
     exclusiveMinimum?: number;
     exclusiveMaximum?: number;
