@@ -86,4 +86,16 @@ describe('tsconfig resolution', () => {
       process.chdir(workingDir);
     }
   });
+
+  it('looks for the tsconfig in the working directory when there is no entry file', () => {
+    write('tsconfig.json', '{}');
+    const workingDir = process.cwd();
+    process.chdir(projectDir);
+    try {
+      expect(MetadataGenerator.resolveTsconfigPath('')).to.equal(join(projectDir, 'tsconfig.json'));
+      expect(MetadataGenerator.resolveTsconfigPath(undefined)).to.equal(join(projectDir, 'tsconfig.json'));
+    } finally {
+      process.chdir(workingDir);
+    }
+  });
 });
