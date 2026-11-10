@@ -1213,6 +1213,8 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
 
   allSpecs.forEach(currentSpec => {
     describe(`for ${currentSpec.specName}`, () => {
+      // A config without implicit extras writes `additionalProperties: false` on each object literal.
+      const literalExtras = currentSpec.specName === 'specWithNoImplicitExtras' ? { additionalProperties: false } : {};
       describe('should set additionalProperties to false if noImplicitAdditionalProperties is set to "throw-on-extras" (when there are no dictionary or any types)', () => {
         // Arrange
 
@@ -1329,6 +1331,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       description: undefined,
                       format: undefined,
                       example: undefined,
+                      ...literalExtras,
                     },
                     bool: { type: 'boolean', default: undefined, description: undefined, format: undefined, example: undefined },
                     optional: { format: 'double', type: 'number', default: undefined, description: undefined, example: undefined },
@@ -1339,10 +1342,12 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                   description: undefined,
                   format: undefined,
                   example: undefined,
+                  ...literalExtras,
                 },
               },
               required: ['name'],
               type: 'object',
+              ...literalExtras,
             });
           },
           notDeprecatedProperty: (propertyName, propertySchema) => {
@@ -1676,6 +1681,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                   example: undefined,
                   format: undefined,
                   default: undefined,
+                  ...literalExtras,
                 },
                 'record-bar': {
                   properties: {
@@ -1687,6 +1693,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                   example: undefined,
                   format: undefined,
                   default: undefined,
+                  ...literalExtras,
                 },
               },
               required: ['record-foo', 'record-bar'],
@@ -1695,6 +1702,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               example: undefined,
               format: undefined,
               description: 'Construct a type with a set of properties K of type T',
+              ...literalExtras,
             });
           },
           numberUnionRecord: (propertyName, propertySchema) => {
@@ -1712,6 +1720,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                   example: undefined,
                   format: undefined,
                   default: undefined,
+                  ...literalExtras,
                 },
                 [2]: {
                   properties: {
@@ -1723,6 +1732,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                   example: undefined,
                   format: undefined,
                   default: undefined,
+                  ...literalExtras,
                 },
               },
               required: ['1', '2'],
@@ -1731,6 +1741,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               example: undefined,
               format: undefined,
               description: 'Construct a type with a set of properties K of type T',
+              ...literalExtras,
             });
           },
           stringRecord: (propertyName, propertySchema) => {
@@ -1749,6 +1760,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 },
                 required: ['data'],
                 type: 'object',
+                ...literalExtras,
               },
               default: undefined,
               description: 'Construct a type with a set of properties K of type T',
@@ -1774,6 +1786,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 },
                 required: ['data'],
                 type: 'object',
+                ...literalExtras,
               },
               default: undefined,
               description: 'Construct a type with a set of properties K of type T',
@@ -1950,6 +1963,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               },
               required: ['forwardGenericAlias', 'genericAlias2', 'genericAlias', 'nOLAlias', 'intersectionAlias', 'unionAlias', 'fourtyTwo', 'word'],
               type: 'object',
+              ...literalExtras,
             });
 
             const wordSchema = getComponentSchema('Word', currentSpec);
@@ -2009,6 +2023,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               example: undefined,
               default: undefined,
               format: undefined,
+              ...literalExtras,
             });
 
             const genericAliasStringSchema = getComponentSchema('GenericAlias_string_', currentSpec);
@@ -2081,6 +2096,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 format: undefined,
                 example: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}`,
             );
@@ -2137,6 +2153,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               },
               required: ['a'],
               type: 'object',
+              ...literalExtras,
             });
 
             const getterInterface = getComponentSchema('GetterInterface', currentSpec);
@@ -2156,6 +2173,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               example: undefined,
               format: undefined,
               description: undefined,
+              ...literalExtras,
             });
 
             const getterInterfaceHerited = getComponentSchema('GetterInterfaceHerited', currentSpec);
@@ -2175,6 +2193,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               example: undefined,
               format: undefined,
               description: undefined,
+              ...literalExtras,
             });
 
             const omit = getComponentSchema('Omit_ErrorResponseModel.status_', currentSpec);
@@ -2199,6 +2218,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for a schema linked by property ${propertyName}`,
             );
@@ -2228,6 +2248,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for a schema linked by property ${propertyName}`,
             );
@@ -2241,6 +2262,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for a schema linked by property ${propertyName}`,
             );
@@ -2279,6 +2301,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for a schema linked by property ${propertyName}`,
             );
@@ -2386,6 +2409,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for a schema linked by property ${propertyName}`,
             );
@@ -2407,6 +2431,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               },
               required: ['id'],
               type: 'object',
+              ...literalExtras,
             });
 
             const readonlyClassSchema = getComponentSchema('Readonly_TestClassModel_', currentSpec);
@@ -2506,6 +2531,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     required: ['label', 'id'],
+                    ...literalExtras,
                   },
                   deprecatedPublicConstructorVar: { type: 'boolean', default: undefined, description: undefined, format: undefined, example: undefined, deprecated: true },
                   deprecatedPublicConstructorVar2: { type: 'boolean', default: undefined, description: undefined, format: undefined, example: undefined, deprecated: true },
@@ -2516,6 +2542,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for schema linked by property ${propertyName}`,
             );
@@ -2601,6 +2628,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
               },
               required: ['justNull', 'maybeString', 'wordOrNull', 'numberOrNull'],
               type: 'object',
+              ...literalExtras,
             });
 
             const maybeString = getComponentSchema('Maybe_string_', currentSpec);
@@ -2789,6 +2817,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 example: undefined,
                 format: undefined,
                 default: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}`,
             );
@@ -2880,6 +2909,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}`,
             );
@@ -3067,6 +3097,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                     },
                     required: ['b', 'a'],
                     type: 'object',
+                    ...literalExtras,
                   },
                   defaultUndefined: {
                     default: undefined,
@@ -3102,6 +3133,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 },
                 required: ['defaultNull', 'replacedTypes', 'basic'],
                 type: 'object',
+                ...literalExtras,
               },
               `for property ${propertyName}`,
             );
@@ -3183,6 +3215,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.replacedTypes`,
             );
@@ -3227,6 +3260,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.simple`,
             );
@@ -3247,6 +3281,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.commented`,
             );
@@ -3268,6 +3303,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.multilineCommented`,
             );
@@ -3288,6 +3324,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.defaultValue`,
             );
@@ -3309,6 +3346,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.deprecated`,
             );
@@ -3330,6 +3368,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.validators`,
             );
@@ -3350,6 +3389,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                   },
                 },
                 type: 'object',
+                ...literalExtras,
               },
               `for property ${propertyName}.examples`,
             );
@@ -3371,6 +3411,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.extensions`,
             );
@@ -3383,6 +3424,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.ignored`,
             );
@@ -3464,6 +3506,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.omitted`,
             );
@@ -3492,6 +3535,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.partial`,
             );
@@ -3531,6 +3575,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.replacedTypes`,
             );
@@ -3570,6 +3615,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.doubleReplacedTypes`,
             );
@@ -3598,6 +3644,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.postfixed`,
             );
@@ -3622,6 +3669,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                     description: undefined,
                     example: undefined,
                     format: undefined,
+                    ...literalExtras,
                   },
                   numberValue: {
                     properties: {
@@ -3639,6 +3687,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                     description: undefined,
                     example: undefined,
                     format: undefined,
+                    ...literalExtras,
                   },
                 },
                 type: 'object',
@@ -3646,6 +3695,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.values`,
             );
@@ -3674,6 +3724,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.typesValues`,
             );
@@ -3703,6 +3754,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.synonym`,
             );
@@ -3731,6 +3783,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.synonym2`,
             );
@@ -3832,6 +3885,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     type: 'object',
+                    ...literalExtras,
                   },
                   {
                     properties: {
@@ -3841,6 +3895,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     type: 'object',
+                    ...literalExtras,
                   },
                 ],
                 description: 'Make all properties in T optional',
@@ -3861,6 +3916,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     type: 'object',
+                    ...literalExtras,
                   },
                   {
                     additionalProperties: {
@@ -3929,6 +3985,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.intersectionMap`,
             );
@@ -3990,6 +4047,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     type: 'object',
+                    ...literalExtras,
                   },
                   {
                     properties: {
@@ -4001,6 +4059,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     type: 'object',
+                    ...literalExtras,
                   },
                 ],
                 description: 'Make all properties in T optional',
@@ -4024,6 +4083,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     type: 'object',
+                    ...literalExtras,
                   },
                   {
                     properties: {
@@ -4035,6 +4095,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                       },
                     },
                     type: 'object',
+                    ...literalExtras,
                   },
                 ],
                 description: 'Make all properties in T optional',
@@ -4141,6 +4202,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 example: undefined,
                 default: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.mappedConditional`,
             );
@@ -4336,6 +4398,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.keysOfAny`,
             );
@@ -4360,6 +4423,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 description: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.keysOfInterface`,
             );
@@ -4389,6 +4453,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.multiplePartial`,
             );
@@ -4415,6 +4480,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.separateField`,
             );
@@ -4447,6 +4513,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.separateField.omitted`,
             );
@@ -4474,6 +4541,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.separateField2`,
             );
@@ -4491,6 +4559,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.separateField2.omitted`,
             );
@@ -4526,6 +4595,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.separateField3`,
             );
@@ -4543,6 +4613,7 @@ describe('Definition generation for OpenAPI 3.0.0', () => {
                 default: undefined,
                 example: undefined,
                 format: undefined,
+                ...literalExtras,
               },
               `for property ${propertyName}.separateField3.omitted`,
             );

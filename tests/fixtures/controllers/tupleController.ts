@@ -11,6 +11,10 @@ export interface TupleModel {
   nested: [{ id: number }, ...Array<{ id: number }>];
 }
 
+export interface TupleBox<T> {
+  value: T;
+}
+
 const inferredPair = (): [string, boolean] => ['a', true];
 
 @Route('Tuple')
@@ -23,5 +27,10 @@ export class TupleController {
   @Post('Inferred')
   public inferred(@Body() body: { value: ReturnType<typeof inferredPair> }): { value: ReturnType<typeof inferredPair> } {
     return body;
+  }
+
+  @Post('Boxes')
+  public boxes(): { pair: TupleBox<[string, number]>; swapped: TupleBox<[number, string]> } {
+    return null as never;
   }
 }

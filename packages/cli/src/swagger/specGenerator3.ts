@@ -689,7 +689,15 @@ export class SpecGenerator3 extends SpecGenerator {
   }
 
   protected getSwaggerTypeForIntersectionType(type: Tsoa.IntersectionType, title?: string) {
-    return { allOf: type.types.map(x => this.getSwaggerType(x)), ...(title && { title }) };
+    const allOf = type.types.map(member => {
+      const schema = this.getSwaggerType(member);
+      // `additionalProperties: false` on one member would reject the properties of the others.
+      if (member.dataType === 'nestedObjectLiteral' && !member.additionalProperties) {
+        delete schema.additionalProperties;
+      }
+      return schema;
+    });
+    return { allOf, ...(title && { title }) };
   }
 
   protected getSwaggerTypeForEnumType(enumType: Tsoa.EnumType, title?: string): Swagger.Schema3 {

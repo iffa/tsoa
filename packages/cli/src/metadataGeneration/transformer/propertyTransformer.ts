@@ -24,13 +24,13 @@ export class PropertyTransformer extends Transformer {
     // Interface model
     if (isInterfaceDeclaration(node)) {
       return node.members
-        .filter((member): member is PropertySignature => !isIgnored(member) && isPropertySignature(member))
+        .filter((member): member is PropertySignature => !isIgnored(member) && isPropertySignature(member) && resolver.getPropertyName(member) !== undefined)
         .map((member: PropertySignature) => this.propertyFromSignature(resolver, member, overrideToken));
     }
 
     const properties: Array<PropertyDeclaration | ParameterDeclaration> = [];
     for (const member of node.members) {
-      if (!isIgnored(member) && isPropertyDeclaration(member) && !this.hasStaticModifier(member) && this.hasPublicModifier(member)) {
+      if (!isIgnored(member) && isPropertyDeclaration(member) && !this.hasStaticModifier(member) && this.hasPublicModifier(member) && resolver.getPropertyName(member) !== undefined) {
         properties.push(member);
       }
     }
@@ -63,7 +63,7 @@ export class PropertyTransformer extends Transformer {
       description: resolver.getNodeDescription(propertySignature),
       example: resolver.getNodeExample(propertySignature),
       format: resolver.getNodeFormat(propertySignature),
-      name: resolver.getPropertyName(propertySignature),
+      name: resolver.getPropertyName(propertySignature)!,
       required,
       type: new TypeResolver(propertySignature.type, resolver.current, propertySignature.type.parent, resolver.context).resolve(),
       validators: getPropertyValidators(propertySignature) || {},
@@ -102,7 +102,7 @@ export class PropertyTransformer extends Transformer {
       description: resolver.getNodeDescription(propertyDeclaration),
       example: resolver.getNodeExample(propertyDeclaration),
       format: resolver.getNodeFormat(propertyDeclaration),
-      name: resolver.getPropertyName(propertyDeclaration),
+      name: resolver.getPropertyName(propertyDeclaration)!,
       required,
       type,
       validators: getPropertyValidators(propertyDeclaration) || {},
