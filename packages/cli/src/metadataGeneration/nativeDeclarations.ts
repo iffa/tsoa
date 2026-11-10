@@ -39,6 +39,17 @@ const needsSource = (text: string) => /^\s*@\w/m.test(text) || /^\s*(export\s+)?
 
 const parse = (fileName: string, text: string) => ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true);
 
+/** Declarations drop the JSDoc on an initializer's object keys, such as a zod schema's, and tsoa reads it as the description. */
+const documentsInitializerKeys = (fileName: string, source: string) => {
+  if (!source.includes('/**')) {
+    return false;
+  }
+  const documented = (node: ts.Node): boolean => (ts.isPropertyAssignment(node) && ts.getJSDocCommentsAndTags(node).length > 0) || (ts.forEachChild(node, documented) ?? false);
+  return parse(fileName, source)
+    .statements.filter(ts.isVariableStatement)
+    .some(statement => statement.declarationList.declarations.some(declaration => declaration.initializer !== undefined && documented(declaration.initializer)));
+};
+
 /** Keeps line numbers, which tsoa records in its metadata and error messages. */
 const blankLines = (text: string) => text.replace(/[^\n]/g, '');
 
@@ -214,6 +225,28 @@ function collectOverlay(program: NativeProgram, rootFiles: readonly string[], op
     }
   };
 
+  // A file's declarations expand the types its initializers build from imports, e.g. a zod `.extend()`, so the JSDoc goes with them.
+  const documented = new Map<string, boolean>();
+  const carriesDocumentedKeys = (fileName: string, source: string): boolean => {
+    const known = documented.get(fileName);
+    if (known !== undefined) {
+      return known;
+    }
+    documented.set(fileName, false);
+    const result =
+      documentsInitializerKeys(fileName, source) ||
+      constantValueImports(fileName, source).some(specifier => {
+        const resolved = resolve(specifier, fileName);
+        if (!resolved || !isOverlayable(resolved)) {
+          return false;
+        }
+        const imported = ts.sys.readFile(resolved);
+        return imported !== undefined && carriesDocumentedKeys(resolved, imported);
+      });
+    documented.set(fileName, result);
+    return result;
+  };
+
   const keep = (specifier: string, from: string, next: Set<string>) => {
     const resolved = resolve(specifier, from);
     if (!resolved || !isOverlayable(resolved) || keepSource.has(resolved)) {
@@ -239,7 +272,7 @@ function collectOverlay(program: NativeProgram, rootFiles: readonly string[], op
       if (source === undefined) {
         continue;
       }
-      const declared = failed.has(fileName) || keepSource.has(fileName) ? undefined : declarations.get(fileName);
+      const declared = failed.has(fileName) || keepSource.has(fileName) || carriesDocumentedKeys(fileName, source) ? undefined : declarations.get(fileName);
       const usesSource = needsSource(source);
       const text = declared === undefined ? undefined : usesSource ? stubMethodBodies(fileName, source, declared) : declared;
 

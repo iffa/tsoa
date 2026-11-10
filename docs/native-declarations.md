@@ -13,5 +13,6 @@ tsoa keeps reading the source of:
 - files with classes or decorators, with method bodies removed
 - files whose declarations hit an error, such as a type tsrs can't name
 - constants that a decorator or parameter default reads
+- files with JSDoc on the keys of an object in an initializer, such as a zod schema, and files whose initializers build on one, since declarations drop the JSDoc
 
 The output can differ from a run without tsrs. Enum values and object keys can come out in another order, and an inferred return type can name an alias or expand it differently. Use tsrs everywhere you generate, so a project doesn't flip between the two. Without tsrs, or when tsrs fails, tsoa reads the sources. Set `TSOA_NATIVE=off` to turn it off.
