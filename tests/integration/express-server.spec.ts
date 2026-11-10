@@ -1379,6 +1379,30 @@ describe('Express Server', () => {
       // This is an empty handler
     };
 
+    describe('Optional API key', () => {
+      it('continues without a user when no key is sent', () => {
+        return verifyGetRequest(app, basePath + '/SecurityTest/ApiKeyOrAnonymous', (_err, res) => {
+          expect(res.body).to.deep.equal({ id: 0, name: 'anonymous' });
+        });
+      });
+
+      it('passes on the user of a valid key', () => {
+        return verifyGetRequest(app, basePath + '/SecurityTest/ApiKeyOrAnonymous?access_token=abc123456', (_err, res) => {
+          expect((res.body as UserResponseModel).id).to.equal(1);
+        });
+      });
+
+      it('returns 401 for an invalid key', () => {
+        return verifyGetRequest(app, basePath + '/SecurityTest/ApiKeyOrAnonymous?access_token=invalid', emptyHandler, 401);
+      });
+
+      it('continues without a user when the only entry is empty', () => {
+        return verifyGetRequest(app, basePath + '/SecurityTest/AnonymousOnly', (_err, res) => {
+          expect(res.body).to.deep.equal({ id: 0, name: 'anonymous' });
+        });
+      });
+    });
+
     describe('Only API key', () => {
       it('returns the correct user for user id 1', () => {
         return verifyGetRequest(app, basePath + '/SecurityTest?access_token=abc123456', (_err, res) => {
